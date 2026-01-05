@@ -63,6 +63,7 @@ export interface UserProfile {
 export interface AppSettings {
   navTitle: string;
   navSubtitle: string;
+  navIconUrl: string;
   heroHeading: string;
   heroHeadingHighlight: string;
   heroSubtext: string;

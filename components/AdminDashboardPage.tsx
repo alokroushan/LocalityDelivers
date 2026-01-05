@@ -85,27 +85,27 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     onUpdateAppSettings({ ...appSettings, [field]: value });
   };
 
-  const handleCategoryChange = (index: number, value: string) => {
+  const handleCategoryChange = (index: number, field: keyof CategoryItem, value: string) => {
     const newCats = [...categories];
-    newCats[index] = { ...newCats[index], name: value };
+    newCats[index] = { ...newCats[index], [field]: value };
     onUpdateCategories(newCats);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-10 pb-24 px-6 animate-in fade-in duration-500">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-6 md:pt-10 pb-24 px-4 md:px-6 animate-in fade-in duration-500 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-12">
-          <button onClick={onBack} className="flex items-center gap-2 text-slate-500 font-bold text-sm hover:text-[#049454] transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12 gap-4">
+          <button onClick={onBack} className="flex items-center gap-2 text-slate-500 font-bold text-sm hover:text-[#049454] transition-all w-fit">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/></svg>
             Back to Site
           </button>
           <div className="flex items-center gap-4">
-            <h1 className="text-3xl font-extrabold dark:text-white tracking-tight">System Admin</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold dark:text-white tracking-tight">System Admin</h1>
             <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 text-[10px] font-bold rounded-full border border-indigo-600/20 uppercase tracking-widest">Master Access</div>
           </div>
         </div>
 
-        <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl w-fit mb-8 shadow-sm overflow-x-auto max-w-full">
+        <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl w-full md:w-fit mb-8 shadow-sm overflow-x-auto custom-scrollbar whitespace-nowrap">
           {[
             { id: 'banners', label: 'Hero Banners', icon: '🖼️' },
             { id: 'stores', label: 'Manage Stores', icon: '🏪' },
@@ -116,7 +116,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-[#049454] shadow-md scale-[1.02]' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`px-6 md:px-8 py-3 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-[#049454] shadow-md scale-[1.02]' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <span>{tab.icon}</span>
               {tab.label}
@@ -128,13 +128,14 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         </div>
 
         {activeTab === 'ui-editor' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
-              <h3 className="text-xl font-bold dark:text-white">General Copy Editor</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 md:space-y-8">
+              <h3 className="text-xl font-bold dark:text-white">General Copy & Icon Editor</h3>
               <div className="space-y-6">
                 {[
                   { field: 'navTitle', label: 'Navbar Logo Text' },
                   { field: 'navSubtitle', label: 'Navbar Subtitle (Green Text)' },
+                  { field: 'navIconUrl', label: 'Navbar Logo Icon URL (Empty = Default SVG)' },
                   { field: 'heroHeading', label: 'Hero Heading (White/Dark Part)' },
                   { field: 'heroHeadingHighlight', label: 'Hero Heading (Green Highlight)' },
                   { field: 'heroSubtext', label: 'Hero Subtext (Paragraph)' },
@@ -155,18 +156,37 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
+            <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 md:space-y-8">
               <h3 className="text-xl font-bold dark:text-white">Categories Editor</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-6">
                 {categories.map((cat, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Icon: {cat.icon}</label>
-                    <input 
-                      type="text" 
-                      value={cat.name} 
-                      onChange={(e) => handleCategoryChange(idx, e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
-                    />
+                  <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800 space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-700 rounded-xl border dark:border-slate-600 shadow-sm text-lg">
+                           {cat.icon.length > 2 ? <img src={cat.icon} className="w-full h-full object-cover rounded-xl" /> : cat.icon}
+                        </div>
+                        <p className="font-bold dark:text-white text-sm">Category #{idx + 1}</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Name</label>
+                            <input 
+                                type="text" 
+                                value={cat.name} 
+                                onChange={(e) => handleCategoryChange(idx, 'name', e.target.value)}
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs dark:text-white outline-none" 
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Icon (Emoji or URL)</label>
+                            <input 
+                                type="text" 
+                                value={cat.icon} 
+                                onChange={(e) => handleCategoryChange(idx, 'icon', e.target.value)}
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs dark:text-white outline-none" 
+                            />
+                        </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -178,9 +198,9 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         )}
 
         {activeTab === 'banners' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 animate-in slide-in-from-bottom-4 duration-500">
             {heroSlides.map((slide, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+              <div key={idx} className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
                 <div className="flex justify-between items-center">
                   <h3 className="font-bold dark:text-white">Slide #{idx + 1}</h3>
                   <div className={`w-3 h-3 rounded-full ${slide.color.includes('bg-emerald') ? 'bg-emerald-500' : slide.color.includes('bg-amber') ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
@@ -198,7 +218,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Category Link</label>
                       <input 
@@ -231,9 +251,9 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {activeTab === 'stores' && (
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             {editingStore && (
-                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border-2 border-[#049454]/20 shadow-xl">
+                <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border-2 border-[#049454]/20 shadow-xl">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold dark:text-white">Edit Store: {editingStore.name}</h2>
+                        <h2 className="text-lg md:text-xl font-bold dark:text-white">Edit Store: {editingStore.name}</h2>
                         <button onClick={() => setEditingStore(null)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">Cancel</button>
                     </div>
                     <form onSubmit={handleStoreEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -253,7 +273,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Image URL</label>
                             <input required value={editingStore.image} onChange={e => setEditingStore({...editingStore, image: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
                         </div>
-                        <div className="flex items-center gap-4 md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-700">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-700">
                           <div className="flex-1">
                               <p className="font-bold dark:text-white text-sm">Verified Merchant Badge</p>
                               <p className="text-xs text-slate-400">Enable this to show the blue checkmark next to the store name.</p>
@@ -261,7 +281,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <button 
                               type="button"
                               onClick={() => setEditingStore({...editingStore, isVerified: !editingStore.isVerified})}
-                              className={`w-14 h-8 rounded-full relative transition-all ${editingStore.isVerified ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                              className={`w-14 h-8 rounded-full relative transition-all self-end sm:self-auto ${editingStore.isVerified ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
                           >
                               <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${editingStore.isVerified ? 'left-7' : 'left-1'}`}></div>
                           </button>
@@ -271,35 +291,35 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </div>
             )}
 
-            <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-x-auto">
-                <table className="w-full text-left">
+            <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left min-w-[700px]">
                 <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                    <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Store</th>
-                    <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</th>
-                    <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                    <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Store</th>
+                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</th>
+                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-slate-800">
                     {stores.map(store => (
-                    <tr key={store.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                        <td className="px-8 py-5">
+                    <tr key={store.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors text-sm">
+                        <td className="px-6 md:px-8 py-5">
                         <div className="flex items-center gap-4">
                             <img src={store.image} className="w-10 h-10 rounded-lg object-cover" alt="" />
                             <div>
                                 <div className="flex items-center gap-1.5">
-                                    <p className="font-bold dark:text-white text-sm">{store.name}</p>
+                                    <p className="font-bold dark:text-white truncate max-w-[120px] md:max-w-none">{store.name}</p>
                                     {store.isVerified && (
-                                        <svg className="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+                                        <svg className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
                                     )}
                                 </div>
                                 <p className="text-[10px] text-slate-400">ID: {store.id}</p>
                             </div>
                         </div>
                         </td>
-                        <td className="px-8 py-5 text-sm dark:text-slate-300">{store.category}</td>
-                        <td className="px-8 py-5">
+                        <td className="px-6 md:px-8 py-5 text-slate-600 dark:text-slate-300">{store.category}</td>
+                        <td className="px-6 md:px-8 py-5">
                             <div className="flex gap-2">
                                 <button 
                                     onClick={() => toggleStorePrivacy(store)}
@@ -315,7 +335,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 </button>
                             </div>
                         </td>
-                        <td className="px-8 py-5 text-right">
+                        <td className="px-6 md:px-8 py-5 text-right">
                         <div className="flex justify-end gap-3">
                             <button onClick={() => setEditingStore(store)} className="p-2 text-slate-300 hover:text-[#049454] transition-colors" title="Edit Store Content">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -336,9 +356,9 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {activeTab === 'products' && (
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
             {editingProductData && (
-                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border-2 border-[#049454]/20 shadow-xl">
+                <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border-2 border-[#049454]/20 shadow-xl">
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold dark:text-white">Edit Product: {editingProductData.product.name}</h2>
+                        <h2 className="text-lg md:text-xl font-bold dark:text-white">Edit Product: {editingProductData.product.name}</h2>
                         <button onClick={() => setEditingProductData(null)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">Cancel</button>
                     </div>
                     <form onSubmit={handleProductEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -367,16 +387,16 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               const store = stores.find(s => s.id === storeId);
               if (!store) return null;
               return (
-                <div key={storeId} className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+                <div key={storeId} className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
                   <div className="flex items-center gap-3 mb-6 border-b dark:border-slate-800 pb-4">
                     <img src={store.image} className="w-8 h-8 rounded-full object-cover" alt="" />
-                    <h3 className="font-extrabold dark:text-white text-lg">{store.name}'s Catalog</h3>
+                    <h3 className="font-extrabold dark:text-white text-lg truncate">{store.name}'s Catalog</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {(storeProducts as Product[]).map(product => (
                       <div key={product.id} className="group relative flex flex-col gap-4 p-5 rounded-[28px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 transition-all hover:border-[#049454]/30 shadow-sm">
                         <div className="flex gap-4">
-                            <img src={product.image} className="w-20 h-20 rounded-2xl object-cover shrink-0 shadow-sm" alt="" />
+                            <img src={product.image} className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover shrink-0 shadow-sm" alt="" />
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
                                     <h4 className="font-bold dark:text-white text-sm truncate pr-2">{product.name}</h4>
@@ -389,10 +409,10 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 </div>
                                 <p className="text-[#049454] font-extrabold text-sm mb-3">₹{product.price}</p>
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <button onClick={() => setViewingProduct(viewingProduct?.id === product.id ? null : product)} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-[#049454] transition-colors">{viewingProduct?.id === product.id ? 'Hide Details' : 'View Details'}</button>
-                                    <span className="text-slate-200 dark:text-slate-800">•</span>
+                                    <button onClick={() => setViewingProduct(viewingProduct?.id === product.id ? null : product)} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-[#049454] transition-colors">{viewingProduct?.id === product.id ? 'Hide' : 'Details'}</button>
+                                    <span className="text-slate-200 dark:text-slate-800 hidden xs:block">•</span>
                                     <button onClick={() => setEditingProductData({storeId, product})} className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 hover:text-blue-700 transition-colors">Edit</button>
-                                    <span className="text-slate-200 dark:text-slate-800">•</span>
+                                    <span className="text-slate-200 dark:text-slate-800 hidden xs:block">•</span>
                                     <button onClick={() => onDeleteProduct(storeId, product.id)} className="flex items-center gap-1.5 text-[10px] font-bold text-rose-400 hover:text-rose-600 transition-colors">Delete</button>
                                 </div>
                             </div>
@@ -413,38 +433,38 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         )}
 
         {activeTab === 'approvals' && (
-            <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold dark:text-white">Merchant Approvals</h2>
+            <div className="space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <h2 className="text-xl md:text-2xl font-bold dark:text-white">Merchant Approvals</h2>
                     <p className="text-sm text-slate-400">{onboardingRequests.length} Total Applications</p>
                 </div>
                 {onboardingRequests.length === 0 ? (
-                    <div className="text-center py-24 bg-white dark:bg-slate-900 rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800">
+                    <div className="text-center py-24 md:py-32 bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800">
                         <p className="text-slate-400 font-bold">No merchant applications at the moment.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-6">
                         {onboardingRequests.map(req => (
-                            <div key={req.id} className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
-                                <div className="flex flex-col md:flex-row gap-8">
-                                    <div className="shrink-0">
-                                        <img src={req.photoUrl} className="w-32 h-32 rounded-[24px] object-cover shadow-md" alt="" />
-                                        <div className={`mt-4 text-center py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${req.status === 'pending' ? 'bg-amber-50 text-amber-500' : req.status === 'approved' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
+                            <div key={req.id} className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
+                                <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+                                    <div className="shrink-0 flex flex-col items-center md:items-start">
+                                        <img src={req.photoUrl} className="w-24 h-24 md:w-32 md:h-32 rounded-[16px] md:rounded-[24px] object-cover shadow-md" alt="" />
+                                        <div className={`mt-4 w-full text-center py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${req.status === 'pending' ? 'bg-amber-50 text-amber-500' : req.status === 'approved' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
                                             {req.status}
                                         </div>
                                     </div>
                                     <div className="flex-1 space-y-4">
-                                        <div className="flex justify-between items-start">
+                                        <div className="flex flex-col xs:flex-row justify-between items-start gap-2">
                                             <div>
-                                                <h3 className="text-xl font-bold dark:text-white">{req.businessName}</h3>
+                                                <h3 className="text-lg md:text-xl font-bold dark:text-white">{req.businessName}</h3>
                                                 <p className="text-sm text-[#049454] font-bold">{req.category}</p>
                                             </div>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase">Submitted: {req.submittedAt}</p>
+                                            <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase">Submitted: {req.submittedAt}</p>
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-500">
-                                            <p><span className="font-bold">Email:</span> {req.email}</p>
-                                            <p><span className="font-bold">Phone:</span> {req.phone}</p>
-                                            <p className="sm:col-span-2"><span className="font-bold">Address:</span> {req.address}</p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-500">
+                                            <p><span className="font-bold text-xs">Email:</span> {req.email}</p>
+                                            <p><span className="font-bold text-xs">Phone:</span> {req.phone}</p>
+                                            <p className="sm:col-span-2"><span className="font-bold text-xs">Address:</span> {req.address}</p>
                                         </div>
                                         <div className="pt-4 border-t dark:border-slate-800">
                                             <button onClick={() => setViewingRequest(viewingRequest?.id === req.id ? null : req)} className="text-[#049454] text-xs font-bold hover:underline mb-4 block">
@@ -467,9 +487,9 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                 </div>
                                             )}
                                             {req.status === 'pending' && (
-                                                <div className="flex gap-4 mt-6">
-                                                    <button onClick={() => onApproveMerchant(req.id)} className="flex-1 bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10">Approve & Verify</button>
-                                                    <button onClick={() => onRejectMerchant(req.id)} className="flex-1 bg-rose-50 text-rose-500 border border-rose-200 py-3 rounded-xl font-bold text-sm">Reject Application</button>
+                                                <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                                                    <button onClick={() => onApproveMerchant(req.id)} className="flex-1 bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 transition-transform active:scale-95">Approve & Verify</button>
+                                                    <button onClick={() => onRejectMerchant(req.id)} className="flex-1 bg-rose-50 text-rose-500 border border-rose-200 py-3 rounded-xl font-bold text-sm transition-transform active:scale-95">Reject Application</button>
                                                 </div>
                                             )}
                                         </div>

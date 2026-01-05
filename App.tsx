@@ -56,6 +56,7 @@ const INITIAL_CATEGORIES: CategoryItem[] = [
 const INITIAL_APP_SETTINGS: AppSettings = {
   navTitle: 'Locality',
   navSubtitle: 'Neighborhood Pulse',
+  navIconUrl: '', // Default uses the SVG if empty
   heroHeading: 'Local favorites,',
   heroHeadingHighlight: 'delivered fast.',
   heroSubtext: 'Support your neighbors. Quality items nearby, delivered in minutes.',
@@ -117,7 +118,6 @@ const App: React.FC = () => {
     }
   }, [view, heroSlides.length]);
 
-  // Accountability: Automatically kick users off grid if item becomes private or is deleted
   useEffect(() => {
     if (view === 'store-detail' && selectedStore) {
         const currentStore = stores.find(s => s.id === selectedStore.id);
@@ -539,7 +539,7 @@ const App: React.FC = () => {
       {isCartOpen && (
         <div className="fixed inset-0 z-[140]">
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setIsCartOpen(false)}></div>
-          <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-slate-900 flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+          <div className="absolute right-0 top-0 bottom-0 w-full max-md:max-w-none max-w-md bg-white dark:bg-slate-900 flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
              <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center"><h2 className="text-xl font-bold dark:text-white">Shopping Cart</h2><button onClick={() => setIsCartOpen(false)} className="text-slate-400">Close</button></div>
              <div className="flex-1 p-8 overflow-y-auto">{cart.map(item => <div key={item.id} className="flex justify-between items-center mb-4"><div className="flex flex-col"><span className="dark:text-white font-bold">{item.name}</span><span className="text-xs text-slate-400">Qty: {item.quantity}</span></div><span className="text-[#049454] font-bold">₹{item.price * item.quantity}</span></div>)}</div>
              {cart.length > 0 && <div className="p-8 border-t dark:border-slate-800"><div className="flex justify-between mb-4 font-bold dark:text-white"><span>Total</span><span>₹{cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}</span></div><button onClick={() => { setView('checkout'); setIsCartOpen(false); }} className="w-full bg-[#049454] text-white py-4 rounded-2xl font-bold">Proceed to Checkout</button></div>}
