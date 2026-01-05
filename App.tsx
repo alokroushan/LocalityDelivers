@@ -71,6 +71,7 @@ const App: React.FC = () => {
   const [allProducts, setAllProducts] = useState<Record<string, Product[]>>(INITIAL_PRODUCTS);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
+  const [sellerStoreId, setSellerStoreId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState('English');
   const [heroIndex, setHeroIndex] = useState(0);
@@ -158,6 +159,7 @@ const App: React.FC = () => {
   const handleDeleteStore = (storeId: string) => {
     setStores(prev => prev.filter(s => s.id !== storeId));
     setIsSeller(false);
+    setSellerStoreId(null);
     setView('home');
   };
 
@@ -191,6 +193,11 @@ const App: React.FC = () => {
     } else {
       setIsLoggedIn(true);
       setIsSeller(seller);
+      if (seller) {
+        // Mock finding the store for the existing seller
+        if (email === 'seller@locality.com') setSellerStoreId('1');
+        else setSellerStoreId(null);
+      }
       if (email === INITIAL_PROFILE.email) {
         setUserProfile(INITIAL_PROFILE);
       } else {
@@ -213,6 +220,7 @@ const App: React.FC = () => {
             deliveryFee: 40
         };
         setStores(prev => [newStore, ...prev]);
+        setSellerStoreId(newStore.id);
     }
     setIsLoggedIn(true);
     setIsSeller(true);
@@ -245,7 +253,7 @@ const App: React.FC = () => {
           }}
           onSignInClick={() => { setAuthError(null); setView('auth'); }}
           user={isLoggedIn ? { ...userProfile, isSeller } : null}
-          onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setView('home'); }}
+          onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setSellerStoreId(null); setView('home'); }}
           darkMode={darkMode}
           toggleDarkMode={() => setDarkMode(!darkMode)}
           language={language}
@@ -275,15 +283,15 @@ const App: React.FC = () => {
 
       {view === 'seller-dashboard' && (
         <SellerDashboardPage 
-          store={stores.find(s => s.id === '1') || stores[0]} 
-          products={allProducts['1'] || []}
-          orders={orderHistory.filter(o => o.items.some(item => item.storeId === '1'))}
+          store={stores.find(s => s.id === sellerStoreId) || stores[0]} 
+          products={allProducts[sellerStoreId || ''] || []}
+          orders={orderHistory.filter(o => o.items.some(item => item.storeId === sellerStoreId))}
           onBack={() => setView('home')}
           onUpdateStore={handleUpdateStore}
           onDeleteStore={handleDeleteStore}
-          onAddProduct={(p) => handleAddProduct('1', p)}
-          onUpdateProduct={(p) => handleUpdateProduct('1', p)}
-          onDeleteProduct={(id) => handleDeleteProduct('1', id)}
+          onAddProduct={(p) => handleAddProduct(sellerStoreId || '', p)}
+          onUpdateProduct={(p) => handleUpdateProduct(sellerStoreId || '', p)}
+          onDeleteProduct={(id) => handleDeleteProduct(sellerStoreId || '', id)}
           onProcessOrder={handleProcessOrder}
         />
       )}
