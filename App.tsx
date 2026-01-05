@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from './components/Navbar';
 import StoreCard from './components/StoreCard';
 import StoreDetail from './components/StoreDetail';
@@ -34,6 +34,13 @@ const INITIAL_PRODUCTS: Record<string, Product[]> = {
   ],
 };
 
+const HERO_SLIDES = [
+  { image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200', category: 'Grocery' },
+  { image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', category: 'Pizza Corner' },
+  { image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=1200', category: 'Stationary' },
+  { image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=1200', category: 'Hostel/PG' },
+];
+
 const INITIAL_PROFILE: UserProfile = {
   name: 'Alex Johnson',
   email: 'alex.j@locality.com',
@@ -56,11 +63,32 @@ const App: React.FC = () => {
   const [isSeller, setIsSeller] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState('English');
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
+
+  useEffect(() => {
+    if (view === 'home') {
+      const interval = setInterval(() => {
+        setHeroIndex((prev) => (prev + 1) % HERO_SLIDES.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [view]);
+
+  const filteredStores = useMemo(() => {
+    return stores.filter(store => {
+      const matchesSearch = store.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          store.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter ? store.category === categoryFilter : true;
+      return matchesSearch && matchesCategory;
+    });
+  }, [stores, searchQuery, categoryFilter]);
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -151,14 +179,19 @@ const App: React.FC = () => {
     setView('seller-dashboard');
   };
 
+  const handleHeroClick = (category: string) => {
+    setCategoryFilter(category === categoryFilter ? null : category);
+    setSearchQuery('');
+    window.scrollTo({ top: document.querySelector('main')?.offsetTop ? document.querySelector('main')!.offsetTop - 100 : 0, behavior: 'smooth' });
+  };
+
   return (
     <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300`}>
       {['home', 'store-detail', 'product-detail'].includes(view) && (
         <Navbar 
           onCartClick={() => setIsCartOpen(true)} 
           cartCount={cart.reduce((s, i) => s + i.quantity, 0)} 
-          onSearch={() => {}}
-          onSignInClick={() => setView('auth')}
+          onSearch={(query) => { setSearchQuery(query); setCategoryFilter(null); }}
           user={isLoggedIn ? { ...userProfile, isSeller } : null}
           onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setView('home'); }}
           darkMode={darkMode}
@@ -204,22 +237,67 @@ const App: React.FC = () => {
 
       {view === 'home' && (
         <>
-          <header className="pt-32 pb-20 px-6 border-b border-slate-50 dark:border-slate-900">
+          <header className="pt-32 pb-20 px-6 border-b border-slate-50 dark:border-slate-900 overflow-hidden">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12 text-center md:text-left">
               <div className="flex-1 space-y-6">
                 <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight">Your neighborhood, <br/><span className="text-[#049454]">delivered.</span></h2>
                 <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl font-medium">Support local businesses, from bakeries to stationery shops and more.</p>
               </div>
-              <div className="flex-1 w-full h-[400px] bg-slate-100 dark:bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl">
-                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200" alt="Market" className="w-full h-full object-cover" />
+              <div className="flex-1 w-full h-[400px] bg-slate-100 dark:bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl relative">
+                <div 
+                  className="flex transition-transform duration-1000 ease-in-out h-full"
+                  style={{ transform: `translateX(-${heroIndex * 100}%)` }}
+                >
+                  {HERO_SLIDES.map((slide, idx) => (
+                    <div key={idx} className="w-full h-full flex-shrink-0 cursor-pointer relative group" onClick={() => handleHeroClick(slide.category)}>
+                      <img 
+                        src={slide.image} 
+                        alt={`Slide ${idx}`} 
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                         <div className="bg-white/90 backdrop-blur-md px-6 py-3 rounded-2xl font-bold text-sm text-[#049454] opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg">
+                           View {slide.category}s
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+                  {HERO_SLIDES.map((_, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`h-1.5 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-6 bg-[#049454]' : 'w-1.5 bg-white/40'}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </header>
           <main className="max-w-7xl mx-auto px-6 py-20">
-            <h3 className="text-2xl font-extrabold tracking-tight mb-12">Neighborhood Favorites</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {stores.map(store => <StoreCard key={store.id} store={store} onClick={() => { setSelectedStore(store); setView('store-detail'); }} />)}
+            <div className="flex flex-col md:flex-row justify-between items-baseline mb-12 gap-4">
+              <h3 className="text-2xl font-extrabold tracking-tight">
+                {categoryFilter ? `Neighborhood ${categoryFilter}s` : searchQuery ? `Search Results for "${searchQuery}"` : 'Neighborhood Favorites'}
+              </h3>
+              {(categoryFilter || searchQuery) && (
+                <button 
+                  onClick={() => { setCategoryFilter(null); setSearchQuery(''); }}
+                  className="text-sm font-bold text-[#049454] hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
+            
+            {filteredStores.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {filteredStores.map(store => <StoreCard key={store.id} store={store} onClick={() => { setSelectedStore(store); setView('store-detail'); }} />)}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-slate-50 dark:bg-slate-900 rounded-[40px] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                <p className="text-slate-400 font-bold">No stores found matching your criteria. Try searching for something else!</p>
+              </div>
+            )}
           </main>
         </>
       )}
