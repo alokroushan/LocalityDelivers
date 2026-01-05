@@ -7,13 +7,13 @@ interface NavbarProps {
   onSearch: (query: string) => void;
   isSearching?: boolean;
   onSignInClick: () => void;
-  user: { name: string; email: string; isSeller?: boolean } | null;
+  user: { name: string; email: string; isSeller?: boolean; isAdmin?: boolean } | null;
   onSignOut: () => void;
   darkMode: boolean;
   toggleDarkMode: () => void;
   language: string;
   setLanguage: (lang: string) => void;
-  onOpenModal: (type: 'orders' | 'profile' | 'help' | 'seller-dashboard') => void;
+  onOpenModal: (type: 'orders' | 'profile' | 'help' | 'seller-dashboard' | 'admin-dashboard') => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
@@ -45,7 +45,6 @@ const Navbar: React.FC<NavbarProps> = ({
 
   const languages = ['English', 'Hindi (हिन्दी)', 'Bengali', 'Tamil'];
 
-  // Handle explicit theme changes
   const setLightTheme = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (darkMode) toggleDarkMode();
@@ -88,7 +87,7 @@ const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-900 pl-1.5 pr-1.5 md:pr-3.5 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
             >
-              {user ? <div className="w-8 h-8 bg-[#049454] text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm">{getUserInitials(user.name)}</div> : <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg></div>}
+              {user ? <div className={`w-8 h-8 ${user.isAdmin ? 'bg-indigo-600' : 'bg-[#049454]'} text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm`}>{getUserInitials(user.name)}</div> : <div className="w-8 h-8 bg-slate-200 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg></div>}
               <div className="hidden lg:block text-left"><span className="block text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">Account</span><span className="text-xs font-bold text-slate-700 dark:text-slate-200">{user ? user.name.split(' ')[0] : 'Guest'}</span></div>
               <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"/></svg>
             </button>
@@ -110,6 +109,15 @@ const Navbar: React.FC<NavbarProps> = ({
                   <div className="space-y-5">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">General</p>
+                      {user?.isAdmin && (
+                        <button 
+                          onClick={() => { onOpenModal('admin-dashboard'); setIsMenuOpen(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20 hover:bg-indigo-100 transition-all mb-1"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                          Admin Dashboard
+                        </button>
+                      )}
                       {user?.isSeller && (
                         <button 
                           onClick={() => { onOpenModal('seller-dashboard'); setIsMenuOpen(false); }}
@@ -153,33 +161,6 @@ const Navbar: React.FC<NavbarProps> = ({
                           Dark
                         </button>
                       </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">Regional Settings</p>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setShowLanguagePicker(!showLanguagePicker); }}
-                        className="w-full flex items-center justify-between px-3 py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all border dark:border-slate-800"
-                      >
-                        <div className="flex items-center gap-3">
-                          <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5a18.062 18.062 0 01-1.427-4.524m12.162 5.381a15.53 15.53 0 01-4.994 3.178"/></svg>
-                          <span>{language}</span>
-                        </div>
-                        <svg className={`w-4 h-4 text-slate-400 transition-transform ${showLanguagePicker ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
-                      </button>
-                      {showLanguagePicker && (
-                        <div className="mt-2 bg-slate-50 dark:bg-slate-800 rounded-2xl p-2 animate-in fade-in slide-in-from-top-2 duration-200 shadow-inner grid grid-cols-1 gap-1">
-                          {languages.map(lang => (
-                            <button 
-                              key={lang}
-                              onClick={(e) => { e.stopPropagation(); setLanguage(lang); setShowLanguagePicker(false); }}
-                              className={`w-full text-left px-4 py-2.5 text-xs font-bold rounded-xl transition-all ${language === lang ? 'bg-[#049454] text-white shadow-lg' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-                            >
-                              {lang}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     <div className="pt-4 border-t dark:border-slate-800">

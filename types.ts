@@ -8,6 +8,7 @@ export interface Store {
   deliveryFee: number;
   image: string;
   description: string;
+  isPrivate?: boolean;
 }
 
 export interface Product {
@@ -19,6 +20,7 @@ export interface Product {
   description: string;
   rating?: number;
   reviewCount?: number;
+  isPrivate?: boolean;
 }
 
 export interface CartItem extends Product {
@@ -48,4 +50,12 @@ export interface Recommendation {
   reason: string;
   type: 'store' | 'item';
   id: string;
+}
+
+export interface HeroSlide {
+  image: string;
+  category: string;
+  color: string;
+  title?: string;
+  subtitle?: string;
 }

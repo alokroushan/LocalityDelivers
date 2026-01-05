@@ -5,7 +5,8 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
   // Use gemini-2.5-flash for maps grounding
   const model = 'gemini-2.5-flash'; 
   
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Fix: Always use named parameter and process.env.API_KEY directly
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const config: any = {
     tools: [{ googleMaps: {} }],
@@ -51,7 +52,8 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 
 export const getSmartSuggestions = async (cartItems: string[]) => {
   const model = 'gemini-3-flash-preview';
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Fix: Always use named parameter and process.env.API_KEY directly
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({

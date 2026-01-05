@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 interface AuthPageProps {
@@ -10,9 +11,24 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [role, setRole] = useState<'customer' | 'seller'>('customer');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setLocalError(null);
+    
+    // Check for Admin Credentials
+    if (mode === 'signin' && email.toLowerCase() === 'loca@gmail.com') {
+      if (password === 'loca01') {
+        onLogin(email, false, false);
+        return;
+      } else {
+        setLocalError("Invalid password for admin account.");
+        return;
+      }
+    }
+
     onLogin(email, role === 'seller', mode === 'signup');
   };
 
@@ -44,9 +60,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
               {mode === 'signin' ? 'Welcome back' : 'Create an account'}
             </h2>
             
-            {error && (
+            {(error || localError) && (
               <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
-                <p className="text-sm font-bold text-rose-500">{error}</p>
+                <p className="text-sm font-bold text-rose-500">{error || localError}</p>
               </div>
             )}
             
@@ -88,7 +104,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
-              <input required type="password" placeholder="••••••••" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all" />
+              <input 
+                required 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••" 
+                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all" 
+              />
             </div>
 
             <button type="submit" className="w-full bg-[#049454] text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.01] active:scale-[0.99]">
@@ -99,7 +122,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
           <div className="text-center">
             <button 
               type="button"
-              onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
+              onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setLocalError(null); }}
               className="text-sm font-bold text-[#049454] hover:underline"
             >
               {mode === 'signin' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}

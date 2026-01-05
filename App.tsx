@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from './components/Navbar';
 import StoreCard from './components/StoreCard';
@@ -9,7 +10,8 @@ import ProfilePage from './components/ProfilePage';
 import OrdersPage from './components/OrdersPage';
 import SellerDashboardPage from './components/SellerDashboardPage';
 import SellerVerificationPage from './components/SellerVerificationPage';
-import { Store, Product, CartItem, Order, UserProfile } from './types';
+import AdminDashboardPage from './components/AdminDashboardPage';
+import { Store, Product, CartItem, Order, UserProfile, HeroSlide } from './types';
 
 const INITIAL_STORES: Store[] = [
   { id: '1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 49, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.' },
@@ -33,7 +35,7 @@ const INITIAL_PRODUCTS: Record<string, Product[]> = {
   ],
 };
 
-const HERO_SLIDES = [
+const INITIAL_HERO_SLIDES: HeroSlide[] = [
   { image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=1200', category: 'Hostel/PG', color: 'bg-amber-100/40 dark:bg-amber-950/20' },
   { image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200', category: 'Grocery', color: 'bg-emerald-100/40 dark:bg-emerald-950/20' },
   { image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', category: 'Pizza Corner', color: 'bg-orange-100/40 dark:bg-orange-950/20' },
@@ -60,7 +62,7 @@ const INITIAL_PROFILE: UserProfile = {
 };
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'auth' | 'profile' | 'orders' | 'store-detail' | 'product-detail' | 'checkout' | 'seller-dashboard' | 'seller-verification'>('home');
+  const [view, setView] = useState<'home' | 'auth' | 'profile' | 'orders' | 'store-detail' | 'product-detail' | 'checkout' | 'seller-dashboard' | 'seller-verification' | 'admin-dashboard'>('home');
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -69,8 +71,10 @@ const App: React.FC = () => {
   const [orderHistory, setOrderHistory] = useState<Order[]>([]);
   const [stores, setStores] = useState<Store[]>(INITIAL_STORES);
   const [allProducts, setAllProducts] = useState<Record<string, Product[]>>(INITIAL_PRODUCTS);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sellerStoreId, setSellerStoreId] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState('English');
@@ -78,9 +82,10 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   
-  const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean}[]>([
+  const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean, isAdmin?: boolean}[]>([
     { email: 'alex.j@locality.com', isSeller: false },
-    { email: 'seller@locality.com', isSeller: true }
+    { email: 'seller@locality.com', isSeller: true },
+    { email: 'loca@gmail.com', isSeller: false, isAdmin: true }
   ]);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -92,20 +97,23 @@ const App: React.FC = () => {
   useEffect(() => {
     if (view === 'home') {
       const interval = setInterval(() => {
-        setHeroIndex((prev) => (prev + 1) % HERO_SLIDES.length);
+        setHeroIndex((prev) => (prev + 1) % heroSlides.length);
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [view]);
+  }, [view, heroSlides.length]);
 
   const filteredStores = useMemo(() => {
     return stores.filter(store => {
+      // Admin sees everything, others only public
+      if (!isAdmin && store.isPrivate) return false;
+
       const matchesSearch = store.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           store.category.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = (categoryFilter && categoryFilter !== 'Nearby Shops') ? store.category === categoryFilter : true;
       return matchesSearch && matchesCategory;
     });
-  }, [stores, searchQuery, categoryFilter]);
+  }, [stores, searchQuery, categoryFilter, isAdmin]);
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -141,14 +149,14 @@ const App: React.FC = () => {
   const handleUpdateProduct = (storeId: string, updatedProduct: Product) => {
     setAllProducts(prev => ({
       ...prev,
-      [storeId]: prev[storeId].map(p => p.id === updatedProduct.id ? updatedProduct : p)
+      [storeId]: (prev[storeId] || []).map(p => p.id === updatedProduct.id ? updatedProduct : p)
     }));
   };
 
   const handleDeleteProduct = (storeId: string, productId: string) => {
     setAllProducts(prev => ({
       ...prev,
-      [storeId]: prev[storeId].filter(p => p.id !== productId)
+      [storeId]: (prev[storeId] || []).filter(p => p.id !== productId)
     }));
   };
 
@@ -158,9 +166,11 @@ const App: React.FC = () => {
 
   const handleDeleteStore = (storeId: string) => {
     setStores(prev => prev.filter(s => s.id !== storeId));
-    setIsSeller(false);
-    setSellerStoreId(null);
-    setView('home');
+    if (sellerStoreId === storeId) {
+      setIsSeller(false);
+      setSellerStoreId(null);
+    }
+    if (view === 'seller-dashboard') setView('home');
   };
 
   const handleProcessOrder = (orderId: string, note: string) => {
@@ -169,6 +179,16 @@ const App: React.FC = () => {
 
   const handleAuthSuccess = (email: string, seller: boolean, isSignUp: boolean) => {
     const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    // Special Admin Check
+    if (email.toLowerCase() === 'loca@gmail.com') {
+      setIsLoggedIn(true);
+      setIsAdmin(true);
+      setIsSeller(false);
+      setUserProfile({ ...INITIAL_PROFILE, name: 'System Admin', email: 'loca@gmail.com' });
+      setView('admin-dashboard');
+      return;
+    }
 
     if (isSignUp) {
       if (existingUser) {
@@ -193,8 +213,8 @@ const App: React.FC = () => {
     } else {
       setIsLoggedIn(true);
       setIsSeller(seller);
+      setIsAdmin(false);
       if (seller) {
-        // Mock finding the store for the existing seller
         if (email === 'seller@locality.com') setSellerStoreId('1');
         else setSellerStoreId(null);
       }
@@ -252,8 +272,8 @@ const App: React.FC = () => {
             scrollToMain();
           }}
           onSignInClick={() => { setAuthError(null); setView('auth'); }}
-          user={isLoggedIn ? { ...userProfile, isSeller } : null}
-          onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setSellerStoreId(null); setView('home'); }}
+          user={isLoggedIn ? { ...userProfile, isSeller, isAdmin } : null}
+          onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setIsAdmin(false); setSellerStoreId(null); setView('home'); }}
           darkMode={darkMode}
           toggleDarkMode={() => setDarkMode(!darkMode)}
           language={language}
@@ -296,6 +316,20 @@ const App: React.FC = () => {
         />
       )}
 
+      {view === 'admin-dashboard' && (
+        <AdminDashboardPage 
+          stores={stores}
+          products={allProducts}
+          heroSlides={heroSlides}
+          onBack={() => setView('home')}
+          onUpdateHeroSlides={setHeroSlides}
+          onUpdateStore={handleUpdateStore}
+          onDeleteStore={handleDeleteStore}
+          onUpdateProduct={handleUpdateProduct}
+          onDeleteProduct={handleDeleteProduct}
+        />
+      )}
+
       {view === 'home' && (
         <>
           <div className="h-20" />
@@ -325,14 +359,14 @@ const App: React.FC = () => {
 
           <header 
             className="relative h-[200px] overflow-hidden flex items-center shadow-sm w-full cursor-pointer group"
-            onClick={() => handleHeroClick(HERO_SLIDES[heroIndex].category)}
+            onClick={() => handleHeroClick(heroSlides[heroIndex].category)}
           >
             <div className="absolute top-0 bottom-0 left-0 right-0 z-0 pointer-events-none overflow-hidden">
               <div 
                 className="flex transition-transform duration-1000 ease-in-out h-full"
                 style={{ transform: `translateX(-${heroIndex * 100}%)` }}
               >
-                {HERO_SLIDES.map((slide, idx) => (
+                {heroSlides.map((slide, idx) => (
                   <div key={idx} className={`w-full h-full flex-shrink-0 relative ${slide.color}`}>
                     <div className="absolute left-0 top-0 bottom-0 w-1/2 bg-gradient-to-r from-inherit to-transparent"></div>
                   </div>
@@ -345,7 +379,7 @@ const App: React.FC = () => {
                 className="flex transition-transform duration-1000 ease-in-out h-full"
                 style={{ transform: `translateX(-${heroIndex * 100}%)` }}
               >
-                {HERO_SLIDES.map((slide, idx) => (
+                {heroSlides.map((slide, idx) => (
                   <div key={idx} className="w-full h-full flex-shrink-0 relative">
                     <img 
                       src={slide.image} 
@@ -381,7 +415,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="absolute bottom-4 right-8 flex gap-2 z-20">
-              {HERO_SLIDES.map((_, idx) => (
+              {heroSlides.map((_, idx) => (
                 <button 
                   key={idx} 
                   onClick={(e) => { e.stopPropagation(); setHeroIndex(idx); }}
