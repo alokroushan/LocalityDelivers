@@ -9,6 +9,21 @@ export interface Store {
   image: string;
   description: string;
   isPrivate?: boolean;
+  isVerified?: boolean;
+}
+
+export interface MerchantOnboardingRequest {
+  id: string;
+  businessName: string;
+  category: string;
+  email: string;
+  phone: string;
+  address: string;
+  photoUrl: string;
+  idProofUrl?: string;
+  licenseUrl?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
 }
 
 export interface Product {
@@ -43,6 +58,23 @@ export interface UserProfile {
   phone: string;
   address: string;
   joinDate: string;
+}
+
+export interface AppSettings {
+  navTitle: string;
+  navSubtitle: string;
+  heroHeading: string;
+  heroHeadingHighlight: string;
+  heroSubtext: string;
+  dealsHeading: string;
+  dealsSubtext: string;
+  footerText: string;
+}
+
+export interface CategoryItem {
+  name: string;
+  icon: string;
+  hasDropdown: boolean;
 }
 
 export interface Recommendation {

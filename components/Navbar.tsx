@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { AppSettings } from '../types';
 
 interface NavbarProps {
   onCartClick: () => void;
@@ -14,6 +15,7 @@ interface NavbarProps {
   language: string;
   setLanguage: (lang: string) => void;
   onOpenModal: (type: 'orders' | 'profile' | 'help' | 'seller-dashboard' | 'admin-dashboard') => void;
+  appSettings: AppSettings;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
@@ -28,11 +30,11 @@ const Navbar: React.FC<NavbarProps> = ({
   toggleDarkMode,
   language,
   setLanguage,
-  onOpenModal
+  onOpenModal,
+  appSettings
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,8 +44,6 @@ const Navbar: React.FC<NavbarProps> = ({
   const getUserInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
-
-  const languages = ['English', 'Hindi (हिन्दी)', 'Bengali', 'Tamil'];
 
   const setLightTheme = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,8 +63,8 @@ const Navbar: React.FC<NavbarProps> = ({
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
           </div>
           <div className="hidden sm:block text-left">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-none">Locality</h1>
-            <p className="text-[8px] font-bold text-[#049454] uppercase tracking-widest mt-1">Neighborhood Pulse</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-none">{appSettings.navTitle}</h1>
+            <p className="text-[8px] font-bold text-[#049454] uppercase tracking-widest mt-1">{appSettings.navSubtitle}</p>
           </div>
         </div>
 
@@ -94,9 +94,8 @@ const Navbar: React.FC<NavbarProps> = ({
             
             {isMenuOpen && (
               <>
-                <div className="fixed inset-0 z-[130]" onClick={() => {setIsMenuOpen(false); setShowLanguagePicker(false);}}></div>
+                <div className="fixed inset-0 z-[130]" onClick={() => setIsMenuOpen(false)}></div>
                 <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-[#0b1426] rounded-[32px] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 z-[140] p-5 text-left">
-                  
                   {!user && (
                     <button 
                       onClick={() => { onSignInClick(); setIsMenuOpen(false); }}
@@ -105,7 +104,6 @@ const Navbar: React.FC<NavbarProps> = ({
                       Sign In / Register
                     </button>
                   )}
-
                   <div className="space-y-5">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">General</p>
@@ -127,66 +125,25 @@ const Navbar: React.FC<NavbarProps> = ({
                           Seller Dashboard
                         </button>
                       )}
-                      <button 
-                        onClick={() => { onOpenModal('profile'); setIsMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
-                      >
-                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        Profile & Settings
-                      </button>
-                      <button 
-                        onClick={() => { onOpenModal('orders'); setIsMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
-                      >
-                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-                        My Orders
-                      </button>
+                      <button onClick={() => { onOpenModal('profile'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"><svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>Profile & Settings</button>
+                      <button onClick={() => { onOpenModal('orders'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"><svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>My Orders</button>
                     </div>
-
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-2">Theme Appearance</p>
                       <div className="flex p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800">
-                        <button 
-                          onClick={setLightTheme}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${!darkMode ? 'bg-white dark:bg-slate-700 text-[#049454] shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>
-                          Light
-                        </button>
-                        <button 
-                          onClick={setDarkTheme}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${darkMode ? 'bg-white dark:bg-slate-700 text-[#049454] shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-                          Dark
-                        </button>
+                        <button onClick={setLightTheme} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${!darkMode ? 'bg-white dark:bg-slate-700 text-[#049454] shadow-sm' : 'text-slate-400'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 5a7 7 0 100 14 7 7 0 000-14z"/></svg>Light</button>
+                        <button onClick={setDarkTheme} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${darkMode ? 'bg-white dark:bg-slate-700 text-[#049454] shadow-sm' : 'text-slate-400'}`}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>Dark</button>
                       </div>
                     </div>
-
                     <div className="pt-4 border-t dark:border-slate-800">
-                      <button 
-                        onClick={() => { onOpenModal('help'); setIsMenuOpen(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-[#049454] hover:bg-[#049454]/10 transition-all"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536"/></svg>
-                        Help & Support
-                      </button>
-                      {user && (
-                        <button 
-                          onClick={() => { onSignOut(); setIsMenuOpen(false); }}
-                          className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all mt-1"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
-                          Sign Out
-                        </button>
-                      )}
+                      <button onClick={() => { onOpenModal('help'); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-[#049454] hover:bg-[#049454]/10 transition-all"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536"/></svg>Help & Support</button>
+                      {user && <button onClick={() => { onSignOut(); setIsMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-all mt-1"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>Sign Out</button>}
                     </div>
                   </div>
                 </div>
               </>
             )}
           </div>
-          
           <button onClick={onCartClick} className="w-11 h-11 flex items-center justify-center bg-slate-900 dark:bg-slate-800 text-white rounded-full hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors relative shadow-lg">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
             {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-[#049454] text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-slate-800">{cartCount}</span>}

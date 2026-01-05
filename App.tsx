@@ -11,11 +11,11 @@ import OrdersPage from './components/OrdersPage';
 import SellerDashboardPage from './components/SellerDashboardPage';
 import SellerVerificationPage from './components/SellerVerificationPage';
 import AdminDashboardPage from './components/AdminDashboardPage';
-import { Store, Product, CartItem, Order, UserProfile, HeroSlide } from './types';
+import { Store, Product, CartItem, Order, UserProfile, HeroSlide, MerchantOnboardingRequest, AppSettings, CategoryItem } from './types';
 
 const INITIAL_STORES: Store[] = [
-  { id: '1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 49, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.' },
-  { id: '2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 79, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.' },
+  { id: '1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 49, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.', isVerified: true },
+  { id: '2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 79, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.', isVerified: true },
   { id: '3', name: 'Bansal Stationaries', category: 'Stationary', rating: 4.5, deliveryTime: '15-20 min', deliveryFee: 20, image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=800', description: 'All your academic essentials, from notebooks to high-quality pens.' },
   { id: '4', name: 'Radhe Shyam PG', category: 'Hostel/PG', rating: 4.8, deliveryTime: 'Immediate', deliveryFee: 0, image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&q=80&w=800', description: 'Premium student accommodation with modern amenities and meal services.' },
   { id: '5', name: 'The Pizza Corner', category: 'Pizza Corner', rating: 4.6, deliveryTime: '35-45 min', deliveryFee: 40, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', description: 'Authentic wood-fired pizzas with a variety of local toppings.' },
@@ -42,7 +42,7 @@ const INITIAL_HERO_SLIDES: HeroSlide[] = [
   { image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=1200', category: 'Stationary', color: 'bg-sky-100/40 dark:bg-sky-950/20' },
 ];
 
-const CATEGORIES = [
+const INITIAL_CATEGORIES: CategoryItem[] = [
   { name: 'Grocery', icon: '🥕', hasDropdown: false },
   { name: 'Bakery', icon: '🥐', hasDropdown: true },
   { name: 'Pizza Corner', icon: '🍕', hasDropdown: false },
@@ -52,6 +52,17 @@ const CATEGORIES = [
   { name: 'Home Services', icon: '🛠️', hasDropdown: false },
   { name: 'Nearby Shops', icon: '📍', hasDropdown: false },
 ];
+
+const INITIAL_APP_SETTINGS: AppSettings = {
+  navTitle: 'Locality',
+  navSubtitle: 'Neighborhood Pulse',
+  heroHeading: 'Local favorites,',
+  heroHeadingHighlight: 'delivered fast.',
+  heroSubtext: 'Support your neighbors. Quality items nearby, delivered in minutes.',
+  dealsHeading: 'Best deals in your neighborhood',
+  dealsSubtext: 'Verified local merchants delivering now.',
+  footerText: '© 2024 LOCALITY NETWORK. SUPPORTING LOCAL MERCHANTS.'
+};
 
 const INITIAL_PROFILE: UserProfile = {
   name: 'Alex Johnson',
@@ -72,6 +83,9 @@ const App: React.FC = () => {
   const [stores, setStores] = useState<Store[]>(INITIAL_STORES);
   const [allProducts, setAllProducts] = useState<Record<string, Product[]>>(INITIAL_PRODUCTS);
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
+  const [onboardingRequests, setOnboardingRequests] = useState<MerchantOnboardingRequest[]>([]);
+  const [appSettings, setAppSettings] = useState<AppSettings>(INITIAL_APP_SETTINGS);
+  const [categories, setCategories] = useState<CategoryItem[]>(INITIAL_CATEGORIES);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSeller, setIsSeller] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -103,17 +117,37 @@ const App: React.FC = () => {
     }
   }, [view, heroSlides.length]);
 
+  // Accountability: Automatically kick users off grid if item becomes private or is deleted
+  useEffect(() => {
+    if (view === 'store-detail' && selectedStore) {
+        const currentStore = stores.find(s => s.id === selectedStore.id);
+        if (!currentStore || currentStore.isPrivate) {
+            setView('home');
+            setSelectedStore(null);
+        }
+    }
+    if (view === 'product-detail' && selectedProduct) {
+        const productList = allProducts[selectedProduct.storeId] || [];
+        const currentProduct = productList.find(p => p.id === selectedProduct.id);
+        const currentStore = stores.find(s => s.id === selectedProduct.storeId);
+        
+        if (!currentProduct || currentProduct.isPrivate || !currentStore || currentStore.isPrivate) {
+            setView('home');
+            setSelectedProduct(null);
+            setSelectedStore(null);
+        }
+    }
+  }, [stores, allProducts, view, selectedStore, selectedProduct]);
+
   const filteredStores = useMemo(() => {
     return stores.filter(store => {
-      // Admin sees everything, others only public
-      if (!isAdmin && store.isPrivate) return false;
-
+      if (store.isPrivate) return false;
       const matchesSearch = store.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           store.category.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = (categoryFilter && categoryFilter !== 'Nearby Shops') ? store.category === categoryFilter : true;
       return matchesSearch && matchesCategory;
     });
-  }, [stores, searchQuery, categoryFilter, isAdmin]);
+  }, [stores, searchQuery, categoryFilter]);
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -158,6 +192,7 @@ const App: React.FC = () => {
       ...prev,
       [storeId]: (prev[storeId] || []).filter(p => p.id !== productId)
     }));
+    setCart(prev => prev.filter(item => item.id !== productId));
   };
 
   const handleUpdateStore = (updatedStore: Store) => {
@@ -166,11 +201,11 @@ const App: React.FC = () => {
 
   const handleDeleteStore = (storeId: string) => {
     setStores(prev => prev.filter(s => s.id !== storeId));
+    setCart(prev => prev.filter(item => item.storeId !== storeId));
     if (sellerStoreId === storeId) {
       setIsSeller(false);
       setSellerStoreId(null);
     }
-    if (view === 'seller-dashboard') setView('home');
   };
 
   const handleProcessOrder = (orderId: string, note: string) => {
@@ -179,8 +214,6 @@ const App: React.FC = () => {
 
   const handleAuthSuccess = (email: string, seller: boolean, isSignUp: boolean) => {
     const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    // Special Admin Check
     if (email.toLowerCase() === 'loca@gmail.com') {
       setIsLoggedIn(true);
       setIsAdmin(true);
@@ -189,7 +222,6 @@ const App: React.FC = () => {
       setView('admin-dashboard');
       return;
     }
-
     if (isSignUp) {
       if (existingUser) {
         setAuthError("An account with this email already exists. Please sign in.");
@@ -206,7 +238,6 @@ const App: React.FC = () => {
         return;
       }
     }
-
     setAuthError(null);
     if (seller && isSignUp) {
       setView('seller-verification');
@@ -227,8 +258,22 @@ const App: React.FC = () => {
     }
   };
 
-  const handleVerificationComplete = (storeDetails?: Partial<Store>) => {
+  const handleVerificationComplete = (storeDetails?: any) => {
     if (storeDetails) {
+        const newRequest: MerchantOnboardingRequest = {
+            id: `req-${Date.now()}`,
+            businessName: storeDetails.name,
+            category: storeDetails.category,
+            email: userProfile.email,
+            phone: storeDetails.phone || '',
+            address: storeDetails.address || '',
+            photoUrl: storeDetails.image,
+            idProofUrl: 'https://via.placeholder.com/300x200?text=ID+Proof',
+            licenseUrl: 'https://via.placeholder.com/300x200?text=Business+License',
+            status: 'pending',
+            submittedAt: new Date().toLocaleDateString()
+        };
+        setOnboardingRequests(prev => [...prev, newRequest]);
         const newStore: Store = {
             id: `s-${Date.now()}`,
             name: storeDetails.name || 'New Local Business',
@@ -237,7 +282,8 @@ const App: React.FC = () => {
             description: storeDetails.description || 'Verified local merchant on Locality Delivers.',
             rating: 5.0,
             deliveryTime: '25-35 min',
-            deliveryFee: 40
+            deliveryFee: 40,
+            isVerified: false
         };
         setStores(prev => [newStore, ...prev]);
         setSellerStoreId(newStore.id);
@@ -245,6 +291,17 @@ const App: React.FC = () => {
     setIsLoggedIn(true);
     setIsSeller(true);
     setView('seller-dashboard');
+  };
+
+  const handleApproveMerchant = (requestId: string) => {
+    const request = onboardingRequests.find(r => r.id === requestId);
+    if (!request) return;
+    setOnboardingRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'approved' } : r));
+    setStores(prev => prev.map(s => s.name === request.businessName ? { ...s, isVerified: true } : s));
+  };
+
+  const handleRejectMerchant = (requestId: string) => {
+    setOnboardingRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
   };
 
   const scrollToMain = () => {
@@ -279,6 +336,7 @@ const App: React.FC = () => {
           language={language}
           setLanguage={setLanguage}
           onOpenModal={(m) => setView(m as any)}
+          appSettings={appSettings}
         />
       )}
 
@@ -321,12 +379,19 @@ const App: React.FC = () => {
           stores={stores}
           products={allProducts}
           heroSlides={heroSlides}
+          onboardingRequests={onboardingRequests}
+          appSettings={appSettings}
+          categories={categories}
           onBack={() => setView('home')}
           onUpdateHeroSlides={setHeroSlides}
           onUpdateStore={handleUpdateStore}
           onDeleteStore={handleDeleteStore}
           onUpdateProduct={handleUpdateProduct}
           onDeleteProduct={handleDeleteProduct}
+          onApproveMerchant={handleApproveMerchant}
+          onRejectMerchant={handleRejectMerchant}
+          onUpdateAppSettings={setAppSettings}
+          onUpdateCategories={setCategories}
         />
       )}
 
@@ -335,7 +400,7 @@ const App: React.FC = () => {
           <div className="h-20" />
           <div className="bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 transition-colors overflow-x-auto custom-scrollbar">
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between gap-8 py-3 min-w-max">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.name}
                   onClick={() => handleHeroClick(cat.name)}
@@ -398,10 +463,10 @@ const App: React.FC = () => {
             <div className="max-w-7xl mx-auto w-full relative z-[10] px-8">
               <div className="max-w-xl space-y-2 animate-in slide-in-from-left-8 duration-700">
                 <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-                  Local favorites, <span className="text-[#049454] drop-shadow-sm">delivered fast.</span>
+                  {appSettings.heroHeading} <span className="text-[#049454] drop-shadow-sm">{appSettings.heroHeadingHighlight}</span>
                 </h2>
                 <p className="hidden md:block text-sm text-slate-600 dark:text-slate-300 max-w-sm font-medium leading-relaxed">
-                  Support your neighbors. Quality items nearby, delivered in minutes.
+                  {appSettings.heroSubtext}
                 </p>
                 <div className="flex flex-wrap gap-4 pt-2">
                   <button 
@@ -429,9 +494,9 @@ const App: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-baseline mb-4 gap-4 border-b border-slate-50 dark:border-slate-900 pb-2">
               <div className="space-y-1">
                 <h3 className="text-2xl font-extrabold tracking-tight">
-                  {categoryFilter ? (categoryFilter === 'Nearby Shops' ? 'Neighborhood Pulse' : `${categoryFilter} Gems`) : searchQuery ? `Search Results for "${searchQuery}"` : 'Best deals in your neighborhood'}
+                  {categoryFilter ? (categoryFilter === 'Nearby Shops' ? appSettings.navSubtitle : `${categoryFilter} Gems`) : searchQuery ? `Search Results for "${searchQuery}"` : appSettings.dealsHeading}
                 </h3>
-                <p className="text-xs text-slate-400 font-medium">Verified local merchants delivering now.</p>
+                <p className="text-xs text-slate-400 font-medium">{appSettings.dealsSubtext}</p>
               </div>
               {(categoryFilter || searchQuery) && (
                 <button 
@@ -457,7 +522,15 @@ const App: React.FC = () => {
         </>
       )}
 
-      {view === 'store-detail' && selectedStore && <StoreDetail store={selectedStore} products={allProducts[selectedStore.id] || []} onBack={() => setView('home')} onProductClick={(p) => { setSelectedProduct(p); setView('product-detail'); }} onAddToCart={addToCart} />}
+      {view === 'store-detail' && selectedStore && (
+        <StoreDetail 
+          store={selectedStore} 
+          products={(allProducts[selectedStore.id] || []).filter(p => !p.isPrivate)} 
+          onBack={() => setView('home')} 
+          onProductClick={(p) => { setSelectedProduct(p); setView('product-detail'); }} 
+          onAddToCart={addToCart} 
+        />
+      )}
 
       {view === 'product-detail' && selectedProduct && <ProductDetail product={selectedProduct} similarProducts={[]} onBack={() => setView('store-detail')} onAddToCart={addToCart} onBuyNow={(p) => { addToCart(p); setView('checkout'); }} onStoreClick={() => {}} onProductClick={(p) => setSelectedProduct(p)} />}
 
@@ -475,7 +548,7 @@ const App: React.FC = () => {
       )}
 
       <footer className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 py-16 text-center text-slate-400">
-        <p className="text-xs font-bold uppercase tracking-[0.2em]">© 2024 Locality Network. Supporting Local Merchants.</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em]">{appSettings.footerText}</p>
       </footer>
     </div>
   );
