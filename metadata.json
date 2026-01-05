@@ -1,0 +1,7 @@
+{
+  "name": "Locality Delivers",
+  "description": "Locality is your neighborhood companion that helps you discover, support, and order from the best local businesses right at your doorstep.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
