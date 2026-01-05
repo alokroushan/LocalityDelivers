@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import Navbar from './components/Navbar';
 import StoreCard from './components/StoreCard';
@@ -35,10 +34,10 @@ const INITIAL_PRODUCTS: Record<string, Product[]> = {
 };
 
 const HERO_SLIDES = [
-  { image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200', category: 'Grocery' },
-  { image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', category: 'Pizza Corner' },
-  { image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=1200', category: 'Stationary' },
-  { image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=1200', category: 'Hostel/PG' },
+  { image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=1200', category: 'Hostel/PG', color: 'bg-amber-100/40 dark:bg-amber-950/20' },
+  { image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200', category: 'Grocery', color: 'bg-emerald-100/40 dark:bg-emerald-950/20' },
+  { image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', category: 'Pizza Corner', color: 'bg-orange-100/40 dark:bg-orange-950/20' },
+  { image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=1200', category: 'Stationary', color: 'bg-sky-100/40 dark:bg-sky-950/20' },
 ];
 
 const INITIAL_PROFILE: UserProfile = {
@@ -249,41 +248,74 @@ const App: React.FC = () => {
 
       {view === 'home' && (
         <>
-          <header className="pt-32 pb-20 px-6 border-b border-slate-50 dark:border-slate-900 overflow-hidden">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12 text-center md:text-left">
-              <div className="flex-1 space-y-6">
-                <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight">Your neighborhood, <br/><span className="text-[#049454]">delivered.</span></h2>
-                <p className="text-lg text-slate-500 dark:text-slate-400 max-w-xl font-medium">Support local businesses, from bakeries to stationery shops and more.</p>
+          <header className="relative pt-40 pb-32 px-6 border-b border-slate-50 dark:border-slate-900 overflow-hidden min-h-[600px] flex items-center">
+            {/* Sliding Background Banner Layer */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <div 
+                className="flex transition-transform duration-1000 ease-in-out h-full"
+                style={{ transform: `translateX(-${heroIndex * 100}%)` }}
+              >
+                {HERO_SLIDES.map((slide, idx) => (
+                  <div key={idx} className={`w-full h-full flex-shrink-0 relative ${slide.color}`}>
+                    <div className="absolute left-0 top-0 bottom-0 w-1/2 bg-gradient-to-r from-inherit to-transparent"></div>
+                  </div>
+                ))}
               </div>
-              <div className="flex-1 w-full h-[400px] bg-slate-100 dark:bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl relative">
-                <div 
-                  className="flex transition-transform duration-1000 ease-in-out h-full"
-                  style={{ transform: `translateX(-${heroIndex * 100}%)` }}
-                >
-                  {HERO_SLIDES.map((slide, idx) => (
-                    <div key={idx} className="w-full h-full flex-shrink-0 cursor-pointer relative group" onClick={() => handleHeroClick(slide.category)}>
-                      <img 
-                        src={slide.image} 
-                        alt={`Slide ${idx}`} 
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                         <div className="bg-white/90 backdrop-blur-md px-6 py-3 rounded-2xl font-bold text-sm text-[#049454] opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 shadow-lg">
-                           View {slide.category}s
-                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-                  {HERO_SLIDES.map((_, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`h-1.5 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-6 bg-[#049454]' : 'w-1.5 bg-white/40'}`}
+            </div>
+
+            {/* Full Space Background Slideshow Images */}
+            <div className="absolute inset-0 z-[1] overflow-hidden">
+              <div 
+                className="flex transition-transform duration-1000 ease-in-out h-full"
+                style={{ transform: `translateX(-${heroIndex * 100}%)` }}
+              >
+                {HERO_SLIDES.map((slide, idx) => (
+                  <div key={idx} className="w-full h-full flex-shrink-0 cursor-pointer relative" onClick={() => handleHeroClick(slide.category)}>
+                    <img 
+                      src={slide.image} 
+                      alt={`Slide ${idx}`} 
+                      className="w-full h-full object-cover brightness-[0.9] dark:brightness-[0.4]"
                     />
-                  ))}
+                    {/* Immersive Overlays */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/30 to-transparent dark:from-slate-950/90 dark:via-slate-950/30 dark:to-transparent"></div>
+                    <div className="absolute bottom-8 right-8 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] opacity-40">
+                      Featured: {slide.category}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Hero Content Overlay */}
+            <div className="max-w-7xl mx-auto w-full relative z-[10]">
+              <div className="max-w-2xl space-y-8 animate-in slide-in-from-left-8 duration-700">
+                <h2 className="text-5xl md:text-8xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.1]">
+                  Your neighborhood, <br/>
+                  <span className="text-[#049454] drop-shadow-sm">delivered.</span>
+                </h2>
+                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 max-w-xl font-medium leading-relaxed">
+                  Support local businesses, from bakeries to stationery shops and more.
+                </p>
+                <div className="flex flex-wrap gap-4 pt-4">
+                  <button 
+                    onClick={scrollToMain}
+                    className="bg-[#049454] text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl shadow-emerald-900/20 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]"
+                  >
+                    Browse Local Shops
+                  </button>
                 </div>
               </div>
+            </div>
+
+            {/* Pagination Indicators */}
+            <div className="absolute bottom-10 left-6 flex gap-2 z-20">
+              {HERO_SLIDES.map((_, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setHeroIndex(idx)}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-10 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`}
+                />
+              ))}
             </div>
           </header>
           <main className="max-w-7xl mx-auto px-6 py-20">
