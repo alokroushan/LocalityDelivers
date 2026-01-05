@@ -315,7 +315,10 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <header className="relative h-[200px] overflow-hidden flex items-center shadow-sm w-full">
+          <header 
+            className="relative h-[200px] overflow-hidden flex items-center shadow-sm w-full cursor-pointer group"
+            onClick={() => handleHeroClick(HERO_SLIDES[heroIndex].category)}
+          >
             <div className="absolute top-0 bottom-0 left-0 right-0 z-0 pointer-events-none overflow-hidden">
               <div 
                 className="flex transition-transform duration-1000 ease-in-out h-full"
@@ -335,7 +338,7 @@ const App: React.FC = () => {
                 style={{ transform: `translateX(-${heroIndex * 100}%)` }}
               >
                 {HERO_SLIDES.map((slide, idx) => (
-                  <div key={idx} className="w-full h-full flex-shrink-0 cursor-pointer relative" onClick={() => handleHeroClick(slide.category)}>
+                  <div key={idx} className="w-full h-full flex-shrink-0 relative">
                     <img 
                       src={slide.image} 
                       alt={`Slide ${idx}`} 
@@ -360,7 +363,7 @@ const App: React.FC = () => {
                 </p>
                 <div className="flex flex-wrap gap-4 pt-2">
                   <button 
-                    onClick={scrollToMain}
+                    onClick={(e) => { e.stopPropagation(); scrollToMain(); }}
                     className="bg-[#049454] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]"
                   >
                     Shop Now
@@ -373,7 +376,7 @@ const App: React.FC = () => {
               {HERO_SLIDES.map((_, idx) => (
                 <button 
                   key={idx} 
-                  onClick={() => setHeroIndex(idx)}
+                  onClick={(e) => { e.stopPropagation(); setHeroIndex(idx); }}
                   className={`h-1 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-8 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`}
                 />
               ))}
