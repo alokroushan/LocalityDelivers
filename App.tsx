@@ -15,7 +15,7 @@ const INITIAL_STORES: Store[] = [
   { id: '1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 49, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.' },
   { id: '2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 79, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.' },
   { id: '3', name: 'Bansal Stationaries', category: 'Stationary', rating: 4.5, deliveryTime: '15-20 min', deliveryFee: 20, image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=800', description: 'All your academic essentials, from notebooks to high-quality pens.' },
-  { id: '4', name: 'Radhe Shyam PG', category: 'Hostel/PG', rating: 4.8, deliveryTime: 'Immediate', deliveryFee: 0, image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=800', description: 'Premium student accommodation with modern amenities and meal services.' },
+  { id: '4', name: 'Radhe Shyam PG', category: 'Hostel/PG', rating: 4.8, deliveryTime: 'Immediate', deliveryFee: 0, image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&q=80&w=800', description: 'Premium student accommodation with modern amenities and meal services.' },
   { id: '5', name: 'The Pizza Corner', category: 'Pizza Corner', rating: 4.6, deliveryTime: '35-45 min', deliveryFee: 40, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', description: 'Authentic wood-fired pizzas with a variety of local toppings.' },
   { id: '6', name: 'Agarwal Plastic Shop', category: 'Plastic Shop', rating: 4.4, deliveryTime: '20-30 min', deliveryFee: 30, image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&q=80&w=800', description: 'Quality household plasticware, containers, and kitchen essentials.' },
 ];
@@ -38,6 +38,17 @@ const HERO_SLIDES = [
   { image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200', category: 'Grocery', color: 'bg-emerald-100/40 dark:bg-emerald-950/20' },
   { image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', category: 'Pizza Corner', color: 'bg-orange-100/40 dark:bg-orange-950/20' },
   { image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=1200', category: 'Stationary', color: 'bg-sky-100/40 dark:bg-sky-950/20' },
+];
+
+const CATEGORIES = [
+  { name: 'Grocery', icon: '🥕', hasDropdown: false },
+  { name: 'Bakery', icon: '🥐', hasDropdown: true },
+  { name: 'Stationary', icon: '📚', hasDropdown: true },
+  { name: 'Pizza Corner', icon: '🍕', hasDropdown: false },
+  { name: 'Hostel/PG', icon: '🏠', hasDropdown: true },
+  { name: 'Plastic Shop', icon: '📦', hasDropdown: true },
+  { name: 'Home Services', icon: '🛠️', hasDropdown: false },
+  { name: 'Nearby Shops', icon: '📍', hasDropdown: false },
 ];
 
 const INITIAL_PROFILE: UserProfile = {
@@ -66,7 +77,6 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   
-  // Simulated database of registered users
   const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean}[]>([
     { email: 'alex.j@locality.com', isSeller: false },
     { email: 'seller@locality.com', isSeller: true }
@@ -82,7 +92,7 @@ const App: React.FC = () => {
     if (view === 'home') {
       const interval = setInterval(() => {
         setHeroIndex((prev) => (prev + 1) % HERO_SLIDES.length);
-      }, 4000);
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [view]);
@@ -91,7 +101,7 @@ const App: React.FC = () => {
     return stores.filter(store => {
       const matchesSearch = store.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           store.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter ? store.category === categoryFilter : true;
+      const matchesCategory = (categoryFilter && categoryFilter !== 'Nearby Shops') ? store.category === categoryFilter : true;
       return matchesSearch && matchesCategory;
     });
   }, [stores, searchQuery, categoryFilter]);
@@ -111,7 +121,7 @@ const App: React.FC = () => {
       id: `LOC-${Math.floor(1000 + Math.random() * 9000)}`,
       date: new Date().toISOString().split('T')[0],
       items: [...cart],
-      total: cart.reduce((s, i) => s + (i.price * i.quantity), 0) + 79,
+      total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 79,
       status: 'Processing',
       instructions
     };
@@ -163,7 +173,6 @@ const App: React.FC = () => {
         setAuthError("An account with this email already exists. Please sign in.");
         return;
       }
-      // Add new user to the simulated database
       setRegisteredUsers(prev => [...prev, { email, isSeller: seller }]);
     } else {
       if (!existingUser) {
@@ -176,14 +185,12 @@ const App: React.FC = () => {
       }
     }
 
-    // Success - Clear errors and proceed
     setAuthError(null);
     if (seller && isSignUp) {
       setView('seller-verification');
     } else {
       setIsLoggedIn(true);
       setIsSeller(seller);
-      // Update local profile with the email if it's a new or specific login
       if (email === INITIAL_PROFILE.email) {
         setUserProfile(INITIAL_PROFILE);
       } else {
@@ -230,7 +237,7 @@ const App: React.FC = () => {
       {['home', 'store-detail', 'product-detail'].includes(view) && (
         <Navbar 
           onCartClick={() => setIsCartOpen(true)} 
-          cartCount={cart.reduce((s, i) => s + i.quantity, 0)} 
+          cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} 
           onSearch={(query) => { 
             setSearchQuery(query); 
             setCategoryFilter(null); 
@@ -283,9 +290,33 @@ const App: React.FC = () => {
 
       {view === 'home' && (
         <>
-          <header className="relative pt-40 pb-32 px-6 border-b border-slate-50 dark:border-slate-900 overflow-hidden min-h-[600px] flex items-center">
-            {/* Sliding Background Banner Layer */}
-            <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="h-20" />
+          <div className="bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 transition-colors overflow-x-auto custom-scrollbar">
+            <div className="max-w-7xl mx-auto px-6 flex items-center justify-between gap-8 py-3 min-w-max">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.name}
+                  onClick={() => handleHeroClick(cat.name)}
+                  className={`flex flex-col items-center gap-1.5 group transition-all transform hover:scale-105 ${categoryFilter === cat.name ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
+                >
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl bg-slate-50 dark:bg-slate-900 border ${categoryFilter === cat.name ? 'border-[#049454] bg-[#049454]/5' : 'border-slate-100 dark:border-slate-800'}`}>
+                    {cat.icon}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-[10px] font-bold whitespace-nowrap tracking-tight ${categoryFilter === cat.name ? 'text-[#049454]' : 'text-slate-600 dark:text-slate-300'}`}>
+                      {cat.name}
+                    </span>
+                    {cat.hasDropdown && (
+                      <svg className="w-2 h-2 text-slate-400 group-hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/></svg>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <header className="relative h-[200px] overflow-hidden flex items-center shadow-sm w-full">
+            <div className="absolute top-0 bottom-0 left-0 right-0 z-0 pointer-events-none overflow-hidden">
               <div 
                 className="flex transition-transform duration-1000 ease-in-out h-full"
                 style={{ transform: `translateX(-${heroIndex * 100}%)` }}
@@ -298,7 +329,6 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Full Space Background Slideshow Images */}
             <div className="absolute inset-0 z-[1] overflow-hidden">
               <div 
                 className="flex transition-transform duration-1000 ease-in-out h-full"
@@ -311,58 +341,59 @@ const App: React.FC = () => {
                       alt={`Slide ${idx}`} 
                       className="w-full h-full object-cover brightness-[0.9] dark:brightness-[0.4]"
                     />
-                    {/* Immersive Overlays */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/30 to-transparent dark:from-slate-950/90 dark:via-slate-950/30 dark:to-transparent"></div>
-                    <div className="absolute bottom-8 right-8 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.3em] opacity-40">
-                      Featured: {slide.category}
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/50 to-transparent dark:from-slate-950/95 dark:via-slate-950/50 dark:to-transparent"></div>
+                    <div className="absolute top-3 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-xl text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80">
+                      LIVE DEALS: {slide.category}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Hero Content Overlay */}
-            <div className="max-w-7xl mx-auto w-full relative z-[10]">
-              <div className="max-w-2xl space-y-8 animate-in slide-in-from-left-8 duration-700">
-                <h2 className="text-5xl md:text-8xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.1]">
-                  Your neighborhood, <br/>
-                  <span className="text-[#049454] drop-shadow-sm">delivered.</span>
+            <div className="max-w-7xl mx-auto w-full relative z-[10] px-8">
+              <div className="max-w-xl space-y-2 animate-in slide-in-from-left-8 duration-700">
+                <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+                  Local favorites, <span className="text-[#049454] drop-shadow-sm">delivered fast.</span>
                 </h2>
-                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 max-w-xl font-medium leading-relaxed">
-                  Support local businesses, from bakeries to stationery shops and more.
+                <p className="hidden md:block text-sm text-slate-600 dark:text-slate-300 max-w-sm font-medium leading-relaxed">
+                  Support your neighbors. Quality items nearby, delivered in minutes.
                 </p>
-                <div className="flex flex-wrap gap-4 pt-4">
+                <div className="flex flex-wrap gap-4 pt-2">
                   <button 
                     onClick={scrollToMain}
-                    className="bg-[#049454] text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-2xl shadow-emerald-900/20 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]"
+                    className="bg-[#049454] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]"
                   >
-                    Browse Local Shops
+                    Shop Now
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Pagination Indicators */}
-            <div className="absolute bottom-10 left-6 flex gap-2 z-20">
+            <div className="absolute bottom-4 right-8 flex gap-2 z-20">
               {HERO_SLIDES.map((_, idx) => (
                 <button 
                   key={idx} 
                   onClick={() => setHeroIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-10 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`}
+                  className={`h-1 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-8 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`}
                 />
               ))}
             </div>
           </header>
-          <main className="max-w-7xl mx-auto px-6 py-20">
-            <div className="flex flex-col md:flex-row justify-between items-baseline mb-12 gap-4">
-              <h3 className="text-2xl font-extrabold tracking-tight">
-                {categoryFilter ? `Neighborhood ${categoryFilter}s` : searchQuery ? `Search Results for "${searchQuery}"` : 'Neighborhood Favorites'}
-              </h3>
+
+          <main className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex flex-col md:flex-row justify-between items-baseline mb-4 gap-4 border-b border-slate-50 dark:border-slate-900 pb-2">
+              <div className="space-y-1">
+                <h3 className="text-2xl font-extrabold tracking-tight">
+                  {categoryFilter ? (categoryFilter === 'Nearby Shops' ? 'Neighborhood Pulse' : `${categoryFilter} Gems`) : searchQuery ? `Search Results for "${searchQuery}"` : 'Best deals in your neighborhood'}
+                </h3>
+                <p className="text-xs text-slate-400 font-medium">Verified local merchants delivering now.</p>
+              </div>
               {(categoryFilter || searchQuery) && (
                 <button 
                   onClick={() => { setCategoryFilter(null); setSearchQuery(''); }}
-                  className="text-sm font-bold text-[#049454] hover:underline"
+                  className="text-sm font-bold text-[#049454] hover:underline flex items-center gap-1"
                 >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
                   Clear filters
                 </button>
               )}
@@ -392,8 +423,8 @@ const App: React.FC = () => {
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setIsCartOpen(false)}></div>
           <div className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white dark:bg-slate-900 flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
              <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center"><h2 className="text-xl font-bold dark:text-white">Shopping Cart</h2><button onClick={() => setIsCartOpen(false)} className="text-slate-400">Close</button></div>
-             <div className="flex-1 p-8 overflow-y-auto">{cart.map(i => <div key={i.id} className="flex justify-between items-center mb-4"><div className="flex flex-col"><span className="dark:text-white font-bold">{i.name}</span><span className="text-xs text-slate-400">Qty: {i.quantity}</span></div><span className="text-[#049454] font-bold">₹{i.price * i.quantity}</span></div>)}</div>
-             {cart.length > 0 && <div className="p-8 border-t dark:border-slate-800"><div className="flex justify-between mb-4 font-bold dark:text-white"><span>Total</span><span>₹{cart.reduce((s, i) => s + (i.price * i.quantity), 0)}</span></div><button onClick={() => { setView('checkout'); setIsCartOpen(false); }} className="w-full bg-[#049454] text-white py-4 rounded-2xl font-bold">Proceed to Checkout</button></div>}
+             <div className="flex-1 p-8 overflow-y-auto">{cart.map(item => <div key={item.id} className="flex justify-between items-center mb-4"><div className="flex flex-col"><span className="dark:text-white font-bold">{item.name}</span><span className="text-xs text-slate-400">Qty: {item.quantity}</span></div><span className="text-[#049454] font-bold">₹{item.price * item.quantity}</span></div>)}</div>
+             {cart.length > 0 && <div className="p-8 border-t dark:border-slate-800"><div className="flex justify-between mb-4 font-bold dark:text-white"><span>Total</span><span>₹{cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}</span></div><button onClick={() => { setView('checkout'); setIsCartOpen(false); }} className="w-full bg-[#049454] text-white py-4 rounded-2xl font-bold">Proceed to Checkout</button></div>}
           </div>
         </div>
       )}
