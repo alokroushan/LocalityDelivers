@@ -43,8 +43,8 @@ const HERO_SLIDES = [
 const CATEGORIES = [
   { name: 'Grocery', icon: '🥕', hasDropdown: false },
   { name: 'Bakery', icon: '🥐', hasDropdown: true },
-  { name: 'Stationary', icon: '📚', hasDropdown: true },
   { name: 'Pizza Corner', icon: '🍕', hasDropdown: false },
+  { name: 'Stationary', icon: '📚', hasDropdown: true },
   { name: 'Hostel/PG', icon: '🏠', hasDropdown: true },
   { name: 'Plastic Shop', icon: '📦', hasDropdown: true },
   { name: 'Home Services', icon: '🛠️', hasDropdown: false },
