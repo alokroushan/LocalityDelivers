@@ -3,12 +3,21 @@ import React, { useState } from 'react';
 
 interface SellerVerificationPageProps {
   onBack: () => void;
-  onComplete: () => void;
+  onComplete: (storeDetails?: any) => void;
 }
 
 const SellerVerificationPage: React.FC<SellerVerificationPageProps> = ({ onBack, onComplete }) => {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    businessName: '',
+    gstin: '',
+    category: 'Artisanal Bakery',
+    customCategory: '',
+    phone: '',
+    address: '',
+    photoUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800'
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +25,12 @@ const SellerVerificationPage: React.FC<SellerVerificationPageProps> = ({ onBack,
     // Simulate verification process
     setTimeout(() => {
       setIsSubmitting(false);
-      onComplete();
+      onComplete({
+        name: formData.businessName,
+        category: formData.category === 'Other' ? formData.customCategory : formData.category,
+        image: formData.photoUrl,
+        description: `Local ${formData.category === 'Other' ? formData.customCategory : formData.category} serving the neighborhood.`
+      });
     }, 3000);
   };
 
@@ -29,6 +43,19 @@ const SellerVerificationPage: React.FC<SellerVerificationPageProps> = ({ onBack,
       </div>
     );
   }
+
+  const categoryOptions = [
+    'Artisanal Bakery',
+    'Local Grocery',
+    'Stationary Shop',
+    'Pizza Corner',
+    'Hostel / PG',
+    'Plastic Shop',
+    'Home Services',
+    'Health & Wellness',
+    'Flower Shop',
+    'Other'
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-10 pb-24 px-6 animate-in fade-in duration-500">
@@ -56,30 +83,84 @@ const SellerVerificationPage: React.FC<SellerVerificationPageProps> = ({ onBack,
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Business Name</label>
-                    <input required type="text" placeholder="e.g. Royal Bakes & More" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
+                    <input 
+                      required 
+                      type="text" 
+                      value={formData.businessName}
+                      onChange={(e) => setFormData({...formData, businessName: e.target.value})}
+                      placeholder="e.g. Bansal Stationaries" 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">GSTIN Number</label>
-                    <input required type="text" placeholder="22AAAAA0000A1Z5" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
+                    <input 
+                      required 
+                      type="text" 
+                      value={formData.gstin}
+                      onChange={(e) => setFormData({...formData, gstin: e.target.value})}
+                      placeholder="22AA33300JH" 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Business Category</label>
-                    <select className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20">
-                      <option>Artisanal Bakery</option>
-                      <option>Local Grocery</option>
-                      <option>Home Services</option>
-                      <option>Health & Wellness</option>
-                      <option>Flower Shop</option>
-                    </select>
+                    <div className="space-y-4">
+                        <select 
+                            value={formData.category}
+                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                            className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20"
+                        >
+                            {categoryOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                        {formData.category === 'Other' && (
+                            <input 
+                                required
+                                type="text"
+                                placeholder="Type your category (e.g. PG, Plastic Shop)"
+                                value={formData.customCategory}
+                                onChange={(e) => setFormData({...formData, customCategory: e.target.value})}
+                                className="w-full px-5 py-4 bg-emerald-50/50 dark:bg-slate-800 border border-[#049454]/20 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/40 animate-in fade-in slide-in-from-top-2"
+                            />
+                        )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Primary Contact</label>
-                    <input required type="tel" placeholder="+91 90000 00000" className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
+                    <input 
+                      required 
+                      type="tel" 
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      placeholder="+91 90000 00000" 
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
+                    />
                   </div>
                 </div>
+                
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Store Photo URL</label>
+                  <input 
+                    required 
+                    type="url" 
+                    value={formData.photoUrl}
+                    onChange={(e) => setFormData({...formData, photoUrl: e.target.value})}
+                    placeholder="Paste a link to your store's image..." 
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
+                  />
+                  <p className="text-[10px] text-slate-400 ml-1 italic">Providing a clear photo helps neighbors recognize your shop.</p>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Store Address</label>
-                  <textarea required rows={3} placeholder="Full physical address of your store..." className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none" />
+                  <textarea 
+                    required 
+                    rows={3} 
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="Full physical address of your store..." 
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none" 
+                  />
                 </div>
                 <button 
                   type="button"
