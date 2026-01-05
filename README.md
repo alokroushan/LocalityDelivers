@@ -1,40 +1,23 @@
 # 🏙️ Locality Delivers
 
-Locality Delivers is a comprehensive **hyperlocal commerce platform** designed to bridge the gap between neighborhood residents and local small businesses by enabling fast, localized discovery and delivery of everyday essentials.[web:1][web:3]
-
----
-
-## 🌐 Table of Contents
-- [Overview](#overview)
-- [Core Features](#core-features)
-- [Multi-Role Ecosystem](#multi-role-ecosystem)
-- [AI-Powered Neighborhood Concierge](#ai-powered-neighborhood-concierge)
-- [Merchant Verification & Onboarding](#merchant-verification--onboarding)
-- [Dynamic UI Management](#dynamic-ui-management)
-- [Advanced Shopping Features](#advanced-shopping-features)
-- [Hyperlocal Logistics](#hyperlocal-logistics)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Contributing](#contributing)
-- [License](#license)
-
+Locality Delivers is a comprehensive **hyperlocal commerce platform** designed to bridge the gap between neighborhood residents and local small businesses by enabling fast, localized discovery and delivery of everyday essentials.
 ---
 
 ## 🧩 Overview
 
-Locality Delivers focuses on **hyperlocal e-commerce**, connecting buyers with nearby verified sellers within the same neighborhood for faster delivery and more personalized shopping experiences.[web:3][web:4]  
-The platform is designed as a multi-role system with powerful AI integrations and a no-code admin layer to make operations, discovery, and customization seamless for all stakeholders.[web:5]
+Locality Delivers focuses on **hyperlocal e-commerce**, connecting buyers with nearby verified sellers within the same neighborhood for faster delivery and more personalized shopping experiences.
+The platform is designed as a multi-role system with powerful AI integrations and a no-code admin layer to make operations, discovery, and customization seamless for all stakeholders.
 
 ---
 
 ## ⭐ Core Features
 
 - Multi-role ecosystem for **Customers**, **Sellers**, and **Admins**.  
-- AI-powered neighborhood concierge using **Google Gemini API** with **Google Maps grounding** for local discovery.[web:6][web:20]  
+- AI-powered neighborhood concierge using **Google Gemini API** with **Google Maps grounding** for local discovery. 
 - Merchant verification workflow with admin approval and “Verified Merchant” badge.  
 - No-code **Admin UI Editor** for live UI and content configuration.  
 - Hybrid checkout (Card / UPI / COD) with privacy controls and responsive design.  
-- Hyperlocal logistics focus on delivery time and neighborhood-based fees.[web:1][web:3]
+- Hyperlocal logistics focus on delivery time and neighborhood-based fees.
 
 ---
 
@@ -60,8 +43,8 @@ The platform is designed as a multi-role system with powerful AI integrations an
 
 ## 🤖 AI-Powered Neighborhood Concierge
 
-- Integrated with **Google Gemini API** to handle natural language queries for store and product discovery.[web:6][web:9]  
-- Uses **Google Maps grounding** so users can ask for “best bakery near me” or “organic veggies in my lane” and get localized, context-aware results.[web:18][web:20]  
+- Integrated with **Google Gemini API** to handle natural language queries for store and product discovery.  
+- Uses **Google Maps grounding** so users can ask for “best bakery near me” or “organic veggies in my lane” and get localized, context-aware results.  
 - **Intelligent cross-selling** analyzes cart items to recommend complementary products (e.g., suggesting artisanal jam when sourdough bread is in the cart).
 
 ---
@@ -72,7 +55,7 @@ The platform is designed as a multi-role system with powerful AI integrations an
   - GSTIN and business registration details.
   - ID proof or business license.
   - Store photographs and basic profile.  
-- Admins review submissions via the **Admin Approval System** before granting a **“Verified Merchant” blue checkmark**, improving trust and safety on the platform.[web:17]
+- Admins review submissions via the **Admin Approval System** before granting a **“Verified Merchant” blue checkmark**, improving trust and safety on the platform.
 
 ---
 
@@ -85,7 +68,7 @@ The platform ships with a **no-code Admin UI Editor** so non-technical owners ca
 - Change category names and icons (supports both emojis and custom icon URLs).  
 - Manage rotating **Hero Banners**, their images, and the categories or landing pages they link to.
 
-This setup allows rapid iteration on branding, campaigns, and category focus without deploying new code.[web:4]
+This setup allows rapid iteration on branding, campaigns, and category focus without deploying new code.
 
 ---
 
@@ -100,7 +83,7 @@ This setup allows rapid iteration on branding, campaigns, and category focus wit
 - **Responsive, High-Aesthetic UI**:
   - Mobile-first layouts with smooth animations.
   - **Dark Mode** support.
-  - Uses **Plus Jakarta Sans**, a modern geometric sans serif optimized for legibility and digital interfaces.[web:7][web:13]  
+  - Uses **Plus Jakarta Sans**, a modern geometric sans serif optimized for legibility and digital interfaces.
 - **Persistent Experience**:
   - Local persistence keeps users logged in.
   - Cart contents and user preferences remain intact after page refreshes or tab closures.
@@ -109,7 +92,7 @@ This setup allows rapid iteration on branding, campaigns, and category focus wit
 
 ## 🚚 Hyperlocal Logistics
 
-- Emphasizes **delivery time windows** (e.g., “15–20 mins”) to highlight speed and hyperlocal advantages.[web:3][web:5]  
+- Emphasizes **delivery time windows** (e.g., “15–20 mins”) to highlight speed and hyperlocal advantages. 
 - Shows **neighborhood delivery fees** to encourage users to prefer nearby shops over distant alternatives.  
 - Optimized for short-distance, intra-locality deliveries that support local commerce and reduce logistics overhead.
 
