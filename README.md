@@ -13,7 +13,7 @@ The platform is designed as a multi-role system with powerful AI integrations an
 ## ⭐ Core Features
 
 - Multi-role ecosystem for **Customers**, **Sellers**, and **Admins**.  
-- AI-powered neighborhood concierge using **Google Gemini API** with **Google Maps grounding** for local discovery. 
+- AI-powered neighborhood concierge using **Google Gemini API**. 
 - Merchant verification workflow with admin approval and “Verified Merchant” badge.  
 - No-code **Admin UI Editor** for live UI and content configuration.  
 - Hybrid checkout (Card / UPI / COD) with privacy controls and responsive design.  
@@ -24,7 +24,7 @@ The platform is designed as a multi-role system with powerful AI integrations an
 ## 👥 Multi-Role Ecosystem
 
 ### Customers
-- Browse nearby stores and hyperlocal catalogs based on location.  
+- Browse nearby stores and hyperlocal catalogs.  
 - Search items, manage profiles, and view complete order history.
 
 ### Sellers (Merchants)
