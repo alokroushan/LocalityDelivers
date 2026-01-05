@@ -203,6 +203,7 @@ const App: React.FC = () => {
             setCategoryFilter(null); 
             scrollToMain();
           }}
+          onSignInClick={() => setView('auth')}
           user={isLoggedIn ? { ...userProfile, isSeller } : null}
           onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setView('home'); }}
           darkMode={darkMode}
