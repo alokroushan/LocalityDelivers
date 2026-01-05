@@ -91,6 +91,8 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     onUpdateCategories(newCats);
   };
 
+  const isIconUrl = (icon: string) => icon.startsWith('http') || icon.startsWith('/') || icon.startsWith('data:');
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-6 md:pt-10 pb-24 px-4 md:px-6 animate-in fade-in duration-500 overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
@@ -163,7 +165,7 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800 space-y-4">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-700 rounded-xl border dark:border-slate-600 shadow-sm text-lg">
-                           {cat.icon.length > 2 ? <img src={cat.icon} className="w-full h-full object-cover rounded-xl" /> : cat.icon}
+                           {isIconUrl(cat.icon) ? <img src={cat.icon} className="w-full h-full object-cover rounded-xl" /> : cat.icon}
                         </div>
                         <p className="font-bold dark:text-white text-sm">Category #{idx + 1}</p>
                     </div>

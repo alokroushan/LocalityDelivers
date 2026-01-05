@@ -13,6 +13,17 @@ import SellerVerificationPage from './components/SellerVerificationPage';
 import AdminDashboardPage from './components/AdminDashboardPage';
 import { Store, Product, CartItem, Order, UserProfile, HeroSlide, MerchantOnboardingRequest, AppSettings, CategoryItem } from './types';
 
+// Helper for local storage
+const getStored = <T,>(key: string, fallback: T): T => {
+  const saved = localStorage.getItem(key);
+  if (!saved) return fallback;
+  try {
+    return JSON.parse(saved) as T;
+  } catch {
+    return fallback;
+  }
+};
+
 const INITIAL_STORES: Store[] = [
   { id: '1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 49, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.', isVerified: true },
   { id: '2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 79, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.', isVerified: true },
@@ -56,7 +67,7 @@ const INITIAL_CATEGORIES: CategoryItem[] = [
 const INITIAL_APP_SETTINGS: AppSettings = {
   navTitle: 'Locality',
   navSubtitle: 'Neighborhood Pulse',
-  navIconUrl: '', // Default uses the SVG if empty
+  navIconUrl: '', 
   heroHeading: 'Local favorites,',
   heroHeadingHighlight: 'delivered fast.',
   heroSubtext: 'Support your neighbors. Quality items nearby, delivered in minutes.',
@@ -65,44 +76,65 @@ const INITIAL_APP_SETTINGS: AppSettings = {
   footerText: '© 2024 LOCALITY NETWORK. SUPPORTING LOCAL MERCHANTS.'
 };
 
-const INITIAL_PROFILE: UserProfile = {
-  name: 'Alex Johnson',
-  email: 'alex.j@locality.com',
-  phone: '+91 98765 43210',
-  address: '12-A, Silicon Tower, Indiranagar, Bengaluru',
-  joinDate: 'March 2024'
-};
+const INITIAL_REGISTERED_USERS = [
+  { email: 'alex.j@locality.com', isSeller: false },
+  { email: 'seller@locality.com', isSeller: true },
+  { email: 'loca@gmail.com', isSeller: false, isAdmin: true }
+];
 
 const App: React.FC = () => {
+  // --- Persistent States ---
+  const [stores, setStores] = useState<Store[]>(() => getStored('locality_stores', INITIAL_STORES));
+  const [allProducts, setAllProducts] = useState<Record<string, Product[]>>(() => getStored('locality_products', INITIAL_PRODUCTS));
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => getStored('locality_hero', INITIAL_HERO_SLIDES));
+  const [onboardingRequests, setOnboardingRequests] = useState<MerchantOnboardingRequest[]>(() => getStored('locality_onboarding', []));
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => getStored('locality_settings', INITIAL_APP_SETTINGS));
+  const [categories, setCategories] = useState<CategoryItem[]>(() => getStored('locality_categories', INITIAL_CATEGORIES));
+  const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean, isAdmin?: boolean}[]>(() => getStored('locality_users', INITIAL_REGISTERED_USERS));
+  const [orderHistory, setOrderHistory] = useState<Order[]>(() => getStored('locality_orders', []));
+
+  // --- Session State (Fixes Logout on Refresh) ---
+  const [isLoggedIn, setIsLoggedIn] = useState(() => getStored('locality_isLoggedIn', false));
+  const [isSeller, setIsSeller] = useState(() => getStored('locality_isSeller', false));
+  const [isAdmin, setIsAdmin] = useState(() => getStored('locality_isAdmin', false));
+  const [sellerStoreId, setSellerStoreId] = useState<string | null>(() => getStored('locality_sellerStoreId', null));
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => getStored('locality_profile', {
+    name: 'Guest',
+    email: '',
+    phone: '',
+    address: '',
+    joinDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }));
+
+  // --- UI State (Not persisted) ---
   const [view, setView] = useState<'home' | 'auth' | 'profile' | 'orders' | 'store-detail' | 'product-detail' | 'checkout' | 'seller-dashboard' | 'seller-verification' | 'admin-dashboard'>('home');
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile>(INITIAL_PROFILE);
-  const [orderHistory, setOrderHistory] = useState<Order[]>([]);
-  const [stores, setStores] = useState<Store[]>(INITIAL_STORES);
-  const [allProducts, setAllProducts] = useState<Record<string, Product[]>>(INITIAL_PRODUCTS);
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
-  const [onboardingRequests, setOnboardingRequests] = useState<MerchantOnboardingRequest[]>([]);
-  const [appSettings, setAppSettings] = useState<AppSettings>(INITIAL_APP_SETTINGS);
-  const [categories, setCategories] = useState<CategoryItem[]>(INITIAL_CATEGORIES);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isSeller, setIsSeller] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [sellerStoreId, setSellerStoreId] = useState<string | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => getStored('locality_darkMode', false));
   const [language, setLanguage] = useState('English');
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  
-  const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean, isAdmin?: boolean}[]>([
-    { email: 'alex.j@locality.com', isSeller: false },
-    { email: 'seller@locality.com', isSeller: true },
-    { email: 'loca@gmail.com', isSeller: false, isAdmin: true }
-  ]);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // --- Effects for Persistence ---
+  useEffect(() => { localStorage.setItem('locality_stores', JSON.stringify(stores)); }, [stores]);
+  useEffect(() => { localStorage.setItem('locality_products', JSON.stringify(allProducts)); }, [allProducts]);
+  useEffect(() => { localStorage.setItem('locality_hero', JSON.stringify(heroSlides)); }, [heroSlides]);
+  useEffect(() => { localStorage.setItem('locality_onboarding', JSON.stringify(onboardingRequests)); }, [onboardingRequests]);
+  useEffect(() => { localStorage.setItem('locality_settings', JSON.stringify(appSettings)); }, [appSettings]);
+  useEffect(() => { localStorage.setItem('locality_categories', JSON.stringify(categories)); }, [categories]);
+  useEffect(() => { localStorage.setItem('locality_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
+  useEffect(() => { localStorage.setItem('locality_orders', JSON.stringify(orderHistory)); }, [orderHistory]);
+  useEffect(() => { localStorage.setItem('locality_profile', JSON.stringify(userProfile)); }, [userProfile]);
+  
+  useEffect(() => { localStorage.setItem('locality_isLoggedIn', JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
+  useEffect(() => { localStorage.setItem('locality_isSeller', JSON.stringify(isSeller)); }, [isSeller]);
+  useEffect(() => { localStorage.setItem('locality_isAdmin', JSON.stringify(isAdmin)); }, [isAdmin]);
+  useEffect(() => { localStorage.setItem('locality_sellerStoreId', JSON.stringify(sellerStoreId)); }, [sellerStoreId]);
+  useEffect(() => { localStorage.setItem('locality_darkMode', JSON.stringify(darkMode)); }, [darkMode]);
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
@@ -117,27 +149,6 @@ const App: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [view, heroSlides.length]);
-
-  useEffect(() => {
-    if (view === 'store-detail' && selectedStore) {
-        const currentStore = stores.find(s => s.id === selectedStore.id);
-        if (!currentStore || currentStore.isPrivate) {
-            setView('home');
-            setSelectedStore(null);
-        }
-    }
-    if (view === 'product-detail' && selectedProduct) {
-        const productList = allProducts[selectedProduct.storeId] || [];
-        const currentProduct = productList.find(p => p.id === selectedProduct.id);
-        const currentStore = stores.find(s => s.id === selectedProduct.storeId);
-        
-        if (!currentProduct || currentProduct.isPrivate || !currentStore || currentStore.isPrivate) {
-            setView('home');
-            setSelectedProduct(null);
-            setSelectedStore(null);
-        }
-    }
-  }, [stores, allProducts, view, selectedStore, selectedProduct]);
 
   const filteredStores = useMemo(() => {
     return stores.filter(store => {
@@ -174,25 +185,15 @@ const App: React.FC = () => {
   };
 
   const handleAddProduct = (storeId: string, product: Product) => {
-    setAllProducts(prev => ({
-      ...prev,
-      [storeId]: [...(prev[storeId] || []), product]
-    }));
+    setAllProducts(prev => ({ ...prev, [storeId]: [...(prev[storeId] || []), product] }));
   };
 
   const handleUpdateProduct = (storeId: string, updatedProduct: Product) => {
-    setAllProducts(prev => ({
-      ...prev,
-      [storeId]: (prev[storeId] || []).map(p => p.id === updatedProduct.id ? updatedProduct : p)
-    }));
+    setAllProducts(prev => ({ ...prev, [storeId]: (prev[storeId] || []).map(p => p.id === updatedProduct.id ? updatedProduct : p) }));
   };
 
   const handleDeleteProduct = (storeId: string, productId: string) => {
-    setAllProducts(prev => ({
-      ...prev,
-      [storeId]: (prev[storeId] || []).filter(p => p.id !== productId)
-    }));
-    setCart(prev => prev.filter(item => item.id !== productId));
+    setAllProducts(prev => ({ ...prev, [storeId]: (prev[storeId] || []).filter(p => p.id !== productId) }));
   };
 
   const handleUpdateStore = (updatedStore: Store) => {
@@ -201,7 +202,6 @@ const App: React.FC = () => {
 
   const handleDeleteStore = (storeId: string) => {
     setStores(prev => prev.filter(s => s.id !== storeId));
-    setCart(prev => prev.filter(item => item.storeId !== storeId));
     if (sellerStoreId === storeId) {
       setIsSeller(false);
       setSellerStoreId(null);
@@ -214,20 +214,29 @@ const App: React.FC = () => {
 
   const handleAuthSuccess = (email: string, seller: boolean, isSignUp: boolean) => {
     const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    
     if (email.toLowerCase() === 'loca@gmail.com') {
       setIsLoggedIn(true);
       setIsAdmin(true);
       setIsSeller(false);
-      setUserProfile({ ...INITIAL_PROFILE, name: 'System Admin', email: 'loca@gmail.com' });
+      setUserProfile({ name: 'System Admin', email: 'loca@gmail.com', phone: '', address: '', joinDate: 'March 2024' });
       setView('admin-dashboard');
       return;
     }
+
     if (isSignUp) {
       if (existingUser) {
         setAuthError("An account with this email already exists. Please sign in.");
         return;
       }
-      setRegisteredUsers(prev => [...prev, { email, isSeller: seller }]);
+      const newUser = { email, isSeller: seller };
+      setRegisteredUsers(prev => [...prev, newUser]);
+      // If signing up as seller, go to verification
+      if (seller) {
+        setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0] }));
+        setView('seller-verification');
+        return;
+      }
     } else {
       if (!existingUser) {
         setAuthError("No account found with this email. Please sign up instead.");
@@ -238,48 +247,29 @@ const App: React.FC = () => {
         return;
       }
     }
+
     setAuthError(null);
-    if (seller && isSignUp) {
-      setView('seller-verification');
-    } else {
-      setIsLoggedIn(true);
-      setIsSeller(seller);
-      setIsAdmin(false);
-      if (seller) {
-        if (email === 'seller@locality.com') setSellerStoreId('1');
-        else setSellerStoreId(null);
-      }
-      if (email === INITIAL_PROFILE.email) {
-        setUserProfile(INITIAL_PROFILE);
-      } else {
-        setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0] }));
-      }
-      setView('home');
+    setIsLoggedIn(true);
+    setIsSeller(seller);
+    setIsAdmin(false);
+    
+    if (seller) {
+      const myStore = stores.find(s => s.name.toLowerCase().includes(email.split('@')[0].toLowerCase()));
+      setSellerStoreId(myStore ? myStore.id : null);
     }
+
+    setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0] }));
+    setView('home');
   };
 
   const handleVerificationComplete = (storeDetails?: any) => {
     if (storeDetails) {
-        const newRequest: MerchantOnboardingRequest = {
-            id: `req-${Date.now()}`,
-            businessName: storeDetails.name,
-            category: storeDetails.category,
-            email: userProfile.email,
-            phone: storeDetails.phone || '',
-            address: storeDetails.address || '',
-            photoUrl: storeDetails.image,
-            idProofUrl: 'https://via.placeholder.com/300x200?text=ID+Proof',
-            licenseUrl: 'https://via.placeholder.com/300x200?text=Business+License',
-            status: 'pending',
-            submittedAt: new Date().toLocaleDateString()
-        };
-        setOnboardingRequests(prev => [...prev, newRequest]);
         const newStore: Store = {
             id: `s-${Date.now()}`,
-            name: storeDetails.name || 'New Local Business',
-            category: storeDetails.category || 'Local Service',
-            image: storeDetails.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
-            description: storeDetails.description || 'Verified local merchant on Locality Delivers.',
+            name: storeDetails.name,
+            category: storeDetails.category,
+            image: storeDetails.image,
+            description: storeDetails.description,
             rating: 5.0,
             deliveryTime: '25-35 min',
             deliveryFee: 40,
@@ -306,9 +296,7 @@ const App: React.FC = () => {
 
   const scrollToMain = () => {
     const mainElement = document.querySelector('main');
-    if (mainElement) {
-      window.scrollTo({ top: mainElement.offsetTop - 100, behavior: 'smooth' });
-    }
+    if (mainElement) { window.scrollTo({ top: mainElement.offsetTop - 100, behavior: 'smooth' }); }
   };
 
   const handleHeroClick = (category: string) => {
@@ -317,20 +305,27 @@ const App: React.FC = () => {
     scrollToMain();
   };
 
+  const onSignOut = () => {
+    setIsLoggedIn(false);
+    setIsSeller(false);
+    setIsAdmin(false);
+    setSellerStoreId(null);
+    setUserProfile({ name: 'Guest', email: '', phone: '', address: '', joinDate: '' });
+    setView('home');
+  };
+
+  const isIconUrl = (icon: string) => icon.startsWith('http') || icon.startsWith('/') || icon.startsWith('data:');
+
   return (
     <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300`}>
       {['home', 'store-detail', 'product-detail'].includes(view) && (
         <Navbar 
           onCartClick={() => setIsCartOpen(true)} 
           cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} 
-          onSearch={(query) => { 
-            setSearchQuery(query); 
-            setCategoryFilter(null); 
-            scrollToMain();
-          }}
+          onSearch={(query) => { setSearchQuery(query); setCategoryFilter(null); scrollToMain(); }}
           onSignInClick={() => { setAuthError(null); setView('auth'); }}
           user={isLoggedIn ? { ...userProfile, isSeller, isAdmin } : null}
-          onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setIsAdmin(false); setSellerStoreId(null); setView('home'); }}
+          onSignOut={onSignOut}
           darkMode={darkMode}
           toggleDarkMode={() => setDarkMode(!darkMode)}
           language={language}
@@ -343,7 +338,7 @@ const App: React.FC = () => {
       {view === 'auth' && (
         <AuthPage 
           onBack={() => { setAuthError(null); setView('home'); }} 
-          onLogin={(email, seller, isSignUp) => handleAuthSuccess(email, seller, isSignUp)} 
+          onLogin={handleAuthSuccess} 
           error={authError}
         />
       )}
@@ -407,7 +402,7 @@ const App: React.FC = () => {
                   className={`flex flex-col items-center gap-1.5 group transition-all transform hover:scale-105 ${categoryFilter === cat.name ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
                 >
                   <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl bg-slate-50 dark:bg-slate-900 border ${categoryFilter === cat.name ? 'border-[#049454] bg-[#049454]/5' : 'border-slate-100 dark:border-slate-800'}`}>
-                    {cat.icon}
+                    {isIconUrl(cat.icon) ? <img src={cat.icon} className="w-6 h-6 object-contain" /> : cat.icon}
                   </div>
                   <div className="flex items-center gap-1">
                     <span className={`text-[10px] font-bold whitespace-nowrap tracking-tight ${categoryFilter === cat.name ? 'text-[#049454]' : 'text-slate-600 dark:text-slate-300'}`}>
@@ -426,19 +421,6 @@ const App: React.FC = () => {
             className="relative h-[200px] overflow-hidden flex items-center shadow-sm w-full cursor-pointer group"
             onClick={() => handleHeroClick(heroSlides[heroIndex].category)}
           >
-            <div className="absolute top-0 bottom-0 left-0 right-0 z-0 pointer-events-none overflow-hidden">
-              <div 
-                className="flex transition-transform duration-1000 ease-in-out h-full"
-                style={{ transform: `translateX(-${heroIndex * 100}%)` }}
-              >
-                {heroSlides.map((slide, idx) => (
-                  <div key={idx} className={`w-full h-full flex-shrink-0 relative ${slide.color}`}>
-                    <div className="absolute left-0 top-0 bottom-0 w-1/2 bg-gradient-to-r from-inherit to-transparent"></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <div className="absolute inset-0 z-[1] overflow-hidden">
               <div 
                 className="flex transition-transform duration-1000 ease-in-out h-full"
@@ -446,11 +428,7 @@ const App: React.FC = () => {
               >
                 {heroSlides.map((slide, idx) => (
                   <div key={idx} className="w-full h-full flex-shrink-0 relative">
-                    <img 
-                      src={slide.image} 
-                      alt={`Slide ${idx}`} 
-                      className="w-full h-full object-cover brightness-[0.9] dark:brightness-[0.4]"
-                    />
+                    <img src={slide.image} alt={`Slide ${idx}`} className="w-full h-full object-cover brightness-[0.9] dark:brightness-[0.4]" />
                     <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/50 to-transparent dark:from-slate-950/95 dark:via-slate-950/50 dark:to-transparent"></div>
                     <div className="absolute top-3 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-xl text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80">
                       LIVE DEALS: {slide.category}
@@ -469,10 +447,7 @@ const App: React.FC = () => {
                   {appSettings.heroSubtext}
                 </p>
                 <div className="flex flex-wrap gap-4 pt-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); scrollToMain(); }}
-                    className="bg-[#049454] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]"
-                  >
+                  <button onClick={(e) => { e.stopPropagation(); scrollToMain(); }} className="bg-[#049454] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]">
                     Shop Now
                   </button>
                 </div>
@@ -481,11 +456,7 @@ const App: React.FC = () => {
 
             <div className="absolute bottom-4 right-8 flex gap-2 z-20">
               {heroSlides.map((_, idx) => (
-                <button 
-                  key={idx} 
-                  onClick={(e) => { e.stopPropagation(); setHeroIndex(idx); }}
-                  className={`h-1 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-8 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`}
-                />
+                <button key={idx} onClick={(e) => { e.stopPropagation(); setHeroIndex(idx); }} className={`h-1 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-8 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`} />
               ))}
             </div>
           </header>
@@ -499,10 +470,7 @@ const App: React.FC = () => {
                 <p className="text-xs text-slate-400 font-medium">{appSettings.dealsSubtext}</p>
               </div>
               {(categoryFilter || searchQuery) && (
-                <button 
-                  onClick={() => { setCategoryFilter(null); setSearchQuery(''); }}
-                  className="text-sm font-bold text-[#049454] hover:underline flex items-center gap-1"
-                >
+                <button onClick={() => { setCategoryFilter(null); setSearchQuery(''); }} className="text-sm font-bold text-[#049454] hover:underline flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
                   Clear filters
                 </button>
