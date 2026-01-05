@@ -65,6 +65,13 @@ const App: React.FC = () => {
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  
+  // Simulated database of registered users
+  const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean}[]>([
+    { email: 'alex.j@locality.com', isSeller: false },
+    { email: 'seller@locality.com', isSeller: true }
+  ]);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
@@ -149,12 +156,39 @@ const App: React.FC = () => {
   };
 
   const handleAuthSuccess = (email: string, seller: boolean, isSignUp: boolean) => {
+    const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (isSignUp) {
+      if (existingUser) {
+        setAuthError("An account with this email already exists. Please sign in.");
+        return;
+      }
+      // Add new user to the simulated database
+      setRegisteredUsers(prev => [...prev, { email, isSeller: seller }]);
+    } else {
+      if (!existingUser) {
+        setAuthError("No account found with this email. Please sign up instead.");
+        return;
+      }
+      if (existingUser.isSeller !== seller) {
+        setAuthError(`This account is registered as a ${existingUser.isSeller ? 'Seller' : 'Customer'}. Please switch roles above.`);
+        return;
+      }
+    }
+
+    // Success - Clear errors and proceed
+    setAuthError(null);
     if (seller && isSignUp) {
       setView('seller-verification');
     } else {
       setIsLoggedIn(true);
       setIsSeller(seller);
-      setUserProfile(prev => ({ ...prev, email }));
+      // Update local profile with the email if it's a new or specific login
+      if (email === INITIAL_PROFILE.email) {
+        setUserProfile(INITIAL_PROFILE);
+      } else {
+        setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0] }));
+      }
       setView('home');
     }
   };
@@ -202,7 +236,7 @@ const App: React.FC = () => {
             setCategoryFilter(null); 
             scrollToMain();
           }}
-          onSignInClick={() => setView('auth')}
+          onSignInClick={() => { setAuthError(null); setView('auth'); }}
           user={isLoggedIn ? { ...userProfile, isSeller } : null}
           onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setView('home'); }}
           darkMode={darkMode}
@@ -215,8 +249,9 @@ const App: React.FC = () => {
 
       {view === 'auth' && (
         <AuthPage 
-          onBack={() => setView('home')} 
+          onBack={() => { setAuthError(null); setView('home'); }} 
           onLogin={(email, seller, isSignUp) => handleAuthSuccess(email, seller, isSignUp)} 
+          error={authError}
         />
       )}
       
