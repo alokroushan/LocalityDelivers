@@ -17,7 +17,7 @@ const INITIAL_STORES: Store[] = [
   { id: '2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 79, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.' },
   { id: '3', name: 'Bansal Stationaries', category: 'Stationary', rating: 4.5, deliveryTime: '15-20 min', deliveryFee: 20, image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=800', description: 'All your academic essentials, from notebooks to high-quality pens.' },
   { id: '4', name: 'Radhe Shyam PG', category: 'Hostel/PG', rating: 4.8, deliveryTime: 'Immediate', deliveryFee: 0, image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=800', description: 'Premium student accommodation with modern amenities and meal services.' },
-  { id: '5', name: 'The Pizza Corner', category: 'Pizza Corner', rating: 4.6, deliveryTime: '35-45 min', deliveryFee: 40, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800', description: 'Authentic wood-fired pizzas with a variety of local toppings.' },
+  { id: '5', name: 'The Pizza Corner', category: 'Pizza Corner', rating: 4.6, deliveryTime: '35-45 min', deliveryFee: 40, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', description: 'Authentic wood-fired pizzas with a variety of local toppings.' },
   { id: '6', name: 'Agarwal Plastic Shop', category: 'Plastic Shop', rating: 4.4, deliveryTime: '20-30 min', deliveryFee: 30, image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&q=80&w=800', description: 'Quality household plasticware, containers, and kitchen essentials.' },
 ];
 
@@ -179,10 +179,17 @@ const App: React.FC = () => {
     setView('seller-dashboard');
   };
 
+  const scrollToMain = () => {
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      window.scrollTo({ top: mainElement.offsetTop - 100, behavior: 'smooth' });
+    }
+  };
+
   const handleHeroClick = (category: string) => {
     setCategoryFilter(category === categoryFilter ? null : category);
     setSearchQuery('');
-    window.scrollTo({ top: document.querySelector('main')?.offsetTop ? document.querySelector('main')!.offsetTop - 100 : 0, behavior: 'smooth' });
+    scrollToMain();
   };
 
   return (
@@ -191,7 +198,11 @@ const App: React.FC = () => {
         <Navbar 
           onCartClick={() => setIsCartOpen(true)} 
           cartCount={cart.reduce((s, i) => s + i.quantity, 0)} 
-          onSearch={(query) => { setSearchQuery(query); setCategoryFilter(null); }}
+          onSearch={(query) => { 
+            setSearchQuery(query); 
+            setCategoryFilter(null); 
+            scrollToMain();
+          }}
           user={isLoggedIn ? { ...userProfile, isSeller } : null}
           onSignOut={() => { setIsLoggedIn(false); setIsSeller(false); setView('home'); }}
           darkMode={darkMode}
