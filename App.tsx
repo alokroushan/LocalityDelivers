@@ -86,11 +86,22 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleUpdateProduct = (storeId: string, updatedProduct: Product) => {
+    setAllProducts(prev => ({
+      ...prev,
+      [storeId]: prev[storeId].map(p => p.id === updatedProduct.id ? updatedProduct : p)
+    }));
+  };
+
   const handleDeleteProduct = (storeId: string, productId: string) => {
     setAllProducts(prev => ({
       ...prev,
       [storeId]: prev[storeId].filter(p => p.id !== productId)
     }));
+  };
+
+  const handleProcessOrder = (orderId: string, note: string) => {
+    setOrderHistory(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Out for Delivery', sellerNote: note } : o));
   };
 
   const handleAuthSuccess = (email: string, seller: boolean, isSignUp: boolean) => {
@@ -153,7 +164,9 @@ const App: React.FC = () => {
           orders={orderHistory.filter(o => o.items.some(item => item.storeId === '1'))}
           onBack={() => setView('home')}
           onAddProduct={(p) => handleAddProduct('1', p)}
+          onUpdateProduct={(p) => handleUpdateProduct('1', p)}
           onDeleteProduct={(id) => handleDeleteProduct('1', id)}
+          onProcessOrder={handleProcessOrder}
         />
       )}
 

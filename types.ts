@@ -32,6 +32,7 @@ export interface Order {
   total: number;
   status: 'Processing' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
   instructions?: string;
+  sellerNote?: string;
 }
 
 export interface UserProfile {

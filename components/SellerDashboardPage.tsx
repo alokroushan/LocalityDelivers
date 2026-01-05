@@ -8,7 +8,9 @@ interface SellerDashboardPageProps {
   orders: Order[];
   onBack: () => void;
   onAddProduct: (product: Product) => void;
+  onUpdateProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
+  onProcessOrder: (orderId: string, note: string) => void;
 }
 
 const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ 
@@ -17,11 +19,16 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
   orders,
   onBack, 
   onAddProduct,
-  onDeleteProduct
+  onUpdateProduct,
+  onDeleteProduct,
+  onProcessOrder
 }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'orders'>('products');
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newProduct, setNewProduct] = useState({
+  const [showForm, setShowForm] = useState<'add' | 'edit' | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [orderNotes, setOrderNotes] = useState<Record<string, string>>({});
+
+  const [productFormData, setProductFormData] = useState({
     name: '',
     price: '',
     description: '',
@@ -29,21 +36,50 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400'
   });
 
+  const handleAddClick = () => {
+    setProductFormData({
+      name: '',
+      price: '',
+      description: '',
+      category: 'Bakery',
+      image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400'
+    });
+    setShowForm('add');
+  };
+
+  const handleEditClick = (product: Product) => {
+    setEditingProduct(product);
+    setProductFormData({
+      name: product.name,
+      price: product.price.toString(),
+      description: product.description,
+      category: 'Bakery',
+      image: product.image
+    });
+    setShowForm('edit');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const product: Product = {
-      id: `p-${Date.now()}`,
+      id: showForm === 'edit' && editingProduct ? editingProduct.id : `p-${Date.now()}`,
       storeId: store.id,
-      name: newProduct.name,
-      price: parseFloat(newProduct.price),
-      description: newProduct.description,
-      image: newProduct.image,
-      rating: 5.0,
-      reviewCount: 0
+      name: productFormData.name,
+      price: parseFloat(productFormData.price),
+      description: productFormData.description,
+      image: productFormData.image,
+      rating: editingProduct?.rating || 5.0,
+      reviewCount: editingProduct?.reviewCount || 0
     };
-    onAddProduct(product);
-    setNewProduct({ name: '', price: '', description: '', category: 'Bakery', image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400' });
-    setShowAddForm(false);
+
+    if (showForm === 'add') {
+      onAddProduct(product);
+    } else if (showForm === 'edit') {
+      onUpdateProduct(product);
+    }
+    
+    setShowForm(null);
+    setEditingProduct(null);
   };
 
   return (
@@ -115,24 +151,24 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                 <div className="flex justify-between items-center">
                   <h2 className="text-xl font-bold dark:text-white">Listed Products & Services</h2>
                   <button 
-                    onClick={() => setShowAddForm(!showAddForm)}
+                    onClick={handleAddClick}
                     className="bg-[#049454] text-white px-6 py-2.5 rounded-2xl font-bold text-sm shadow-lg shadow-emerald-900/10 transition-all hover:scale-[1.02]"
                   >
-                    {showAddForm ? 'Cancel' : '+ Add New Item'}
+                    {showForm ? 'Cancel' : '+ Add New Item'}
                   </button>
                 </div>
 
-                {showAddForm && (
+                {showForm && (
                   <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-emerald-500/20 shadow-xl animate-in slide-in-from-top-4 duration-300">
-                    <h3 className="font-bold dark:text-white mb-6">New Product Details</h3>
+                    <h3 className="font-bold dark:text-white mb-6">{showForm === 'add' ? 'New Product Details' : 'Edit Product Details'}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div className="space-y-2">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
                         <input 
                           required 
                           type="text" 
-                          value={newProduct.name}
-                          onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                          value={productFormData.name}
+                          onChange={(e) => setProductFormData({...productFormData, name: e.target.value})}
                           placeholder="e.g. Fresh Mango Cake" 
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
                         />
@@ -142,48 +178,70 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                         <input 
                           required 
                           type="number" 
-                          value={newProduct.price}
-                          onChange={(e) => setNewProduct({...newProduct, price: e.target.value})}
+                          value={productFormData.price}
+                          onChange={(e) => setProductFormData({...productFormData, price: e.target.value})}
                           placeholder="e.g. 450" 
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
                         />
                       </div>
                     </div>
                     <div className="space-y-2 mb-6">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Image URL</label>
+                      <input 
+                        required 
+                        type="url" 
+                        value={productFormData.image}
+                        onChange={(e) => setProductFormData({...productFormData, image: e.target.value})}
+                        placeholder="Paste an image URL here..." 
+                        className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
+                      />
+                      <p className="text-[10px] text-slate-400 mt-1">Tip: Use an Unsplash link for high-quality placeholder images.</p>
+                    </div>
+                    <div className="space-y-2 mb-6">
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
                       <textarea 
                         required 
                         rows={3}
-                        value={newProduct.description}
-                        onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                        value={productFormData.description}
+                        onChange={(e) => setProductFormData({...productFormData, description: e.target.value})}
                         placeholder="Describe your service or product to the neighborhood..." 
                         className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none"
                       />
                     </div>
-                    <button type="submit" className="w-full bg-[#049454] text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-900/10">List on Locality Marketplace</button>
+                    <button type="submit" className="w-full bg-[#049454] text-white py-4 rounded-2xl font-bold shadow-lg shadow-emerald-900/10">
+                      {showForm === 'add' ? 'List on Locality Marketplace' : 'Save Product Changes'}
+                    </button>
                   </form>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {products.map(product => (
-                    <div key={product.id} className="bg-white dark:bg-slate-900 rounded-[28px] p-5 border border-slate-100 dark:border-slate-800 shadow-sm flex gap-5 group">
+                    <div key={product.id} className="bg-white dark:bg-slate-900 rounded-[28px] p-5 border border-slate-100 dark:border-slate-800 shadow-sm flex gap-5 group relative">
                       <img src={product.image} className="w-24 h-24 rounded-2xl object-cover" alt={product.name} />
                       <div className="flex-1">
                         <div className="flex justify-between items-start">
                           <h4 className="font-bold dark:text-white text-sm mb-1">{product.name}</h4>
-                          <button 
-                            onClick={() => onDeleteProduct(product.id)}
-                            className="text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                          </button>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => handleEditClick(product)}
+                              className="text-blue-500"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            </button>
+                            <button 
+                              onClick={() => onDeleteProduct(product.id)}
+                              className="text-rose-500"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                          </div>
                         </div>
                         <p className="text-[#049454] font-extrabold mb-2">₹{product.price}</p>
                         <p className="text-[10px] text-slate-400 line-clamp-2">{product.description}</p>
                       </div>
                     </div>
                   ))}
-                  {products.length === 0 && !showAddForm && (
+                  {products.length === 0 && !showForm && (
                     <div className="col-span-full py-20 text-center bg-slate-100 dark:bg-slate-900/50 rounded-[32px] border-2 border-dashed border-slate-200 dark:border-slate-800">
                       <p className="text-slate-400 font-bold">No items listed yet. Start adding your services!</p>
                     </div>
@@ -192,7 +250,10 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
               </>
             ) : (
               <div className="space-y-6">
-                <h2 className="text-xl font-bold dark:text-white">Active Customer Orders</h2>
+                <div className="flex justify-between items-center">
+                   <h2 className="text-xl font-bold dark:text-white">Active Customer Orders</h2>
+                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{orders.length} Pending</p>
+                </div>
                 {orders.length === 0 ? (
                   <div className="py-20 text-center bg-slate-100 dark:bg-slate-900/50 rounded-[32px] border-2 border-dashed border-slate-200 dark:border-slate-800">
                     <p className="text-slate-400 font-bold">No active orders at the moment.</p>
@@ -205,7 +266,7 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Order #{order.id}</p>
                           <p className="font-bold dark:text-white">{order.date}</p>
                         </div>
-                        <span className="bg-blue-50 dark:bg-blue-950/30 text-blue-500 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                        <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest ${order.status === 'Processing' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-500' : 'bg-emerald-50 dark:bg-emerald-950/30 text-[#049454]'}`}>
                           {order.status}
                         </span>
                       </div>
@@ -220,17 +281,37 @@ const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                       </div>
 
                       {order.instructions && (
-                        <div className="p-4 bg-purple-50 dark:bg-purple-950/20 rounded-2xl border border-purple-100 dark:border-purple-900/30 mb-6">
-                          <p className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-1">Customer Instructions</p>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800 mb-6">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Customer Instructions</p>
                           <p className="text-sm text-slate-700 dark:text-slate-300 italic">"{order.instructions}"</p>
+                        </div>
+                      )}
+
+                      {order.status === 'Processing' && (
+                        <div className="space-y-4 mb-6 pt-6 border-t dark:border-slate-800">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Add Note to Customer</label>
+                          <textarea 
+                            value={orderNotes[order.id] || ''}
+                            onChange={(e) => setOrderNotes({...orderNotes, [order.id]: e.target.value})}
+                            placeholder="e.g. Preparing fresh now, will be out in 10 mins!" 
+                            rows={2}
+                            className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none text-sm"
+                          />
                         </div>
                       )}
 
                       <div className="flex justify-between items-center pt-6 border-t dark:border-slate-800">
                         <span className="text-lg font-bold text-[#049454]">Total: ₹{order.total}</span>
-                        <div className="flex gap-2">
-                          <button className="bg-[#049454] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/10">Process Order</button>
-                        </div>
+                        {order.status === 'Processing' && (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => onProcessOrder(order.id, orderNotes[order.id] || '')}
+                              className="bg-[#049454] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all"
+                            >
+                              Process & Send Out
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
