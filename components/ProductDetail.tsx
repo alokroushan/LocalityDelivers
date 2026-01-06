@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Product } from '../types';
 
 interface ProductDetailProps {
@@ -10,6 +9,8 @@ interface ProductDetailProps {
   onBuyNow: (product: Product) => void;
   onStoreClick: (storeId: string) => void;
   onProductClick: (product: Product) => void;
+  wishlist: Product[];
+  onToggleWishlist: (product: Product) => void;
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ 
@@ -18,9 +19,11 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
   onBack, 
   onAddToCart, 
   onBuyNow,
-  onProductClick
+  onProductClick,
+  wishlist,
+  onToggleWishlist
 }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const isWishlisted = wishlist.some(item => item.id === product.id);
 
   return (
     <div className="pt-24 pb-20 px-6 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -81,7 +84,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({
                 Add to Cart
               </button>
               <button 
-                onClick={() => setIsWishlisted(!isWishlisted)}
+                onClick={() => onToggleWishlist(product)}
                 className={`w-14 h-14 flex items-center justify-center rounded-2xl border-2 transition-all ${isWishlisted ? 'bg-rose-50 border-rose-500 text-rose-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400'}`}
               >
                 <svg className="w-6 h-6" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>

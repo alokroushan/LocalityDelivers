@@ -105,8 +105,12 @@ const App: React.FC = () => {
   const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [wishlist, setWishlist] = useState<Product[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  
   const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -234,15 +238,22 @@ const App: React.FC = () => {
       return;
     }
 
+    const geoOptions = {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+    };
+
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
       const result = await getLocalRecommendations(latitude, longitude, "Best neighborhood stores and hidden gems");
       setNearbyDiscovery(result);
       setIsNearbyLoading(false);
     }, (err) => {
-      console.error(err);
+      console.error("Geolocation Error:", err);
+      alert("Locality needs location access to find nearby shops. Please check your browser settings.");
       setIsNearbyLoading(false);
-    });
+    }, geoOptions);
   };
 
   useEffect(() => {
@@ -281,6 +292,16 @@ const App: React.FC = () => {
 
   const clearCart = () => {
     setCart([]);
+  };
+
+  const toggleWishlist = (product: Product) => {
+    setWishlist(prev => {
+      const isAlreadyWishlisted = prev.find(item => item.id === product.id);
+      if (isAlreadyWishlisted) {
+        return prev.filter(item => item.id !== product.id);
+      }
+      return [...prev, product];
+    });
   };
 
   const handleHeroClick = () => {
@@ -436,7 +457,9 @@ const App: React.FC = () => {
         <>
           <Navbar 
             onCartClick={() => setIsCartOpen(true)} 
+            onWishlistClick={() => setIsWishlistOpen(true)}
             cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} 
+            wishlistCount={wishlist.length}
             onSearch={(q) => setSearchQuery(q)}
             onSignInClick={() => setView('auth')}
             user={isLoggedIn ? { ...userProfile, isSeller, isAdmin } : null}
@@ -629,9 +652,27 @@ const App: React.FC = () => {
       )}
 
       {view === 'store-detail' && selectedStore && (
-        <StoreDetail store={selectedStore} products={(allProducts[selectedStore.id] || []).filter(p => !p.isPrivate)} onBack={() => setView('home')} onAddToCart={addToCart} onProductClick={(p) => { setSelectedProduct(p); setView('product-detail'); }} />
+        <StoreDetail 
+          store={selectedStore} 
+          products={(allProducts[selectedStore.id] || []).filter(p => !p.isPrivate)} 
+          onBack={() => setView('home')} 
+          onAddToCart={addToCart} 
+          onProductClick={(p) => { setSelectedProduct(p); setView('product-detail'); }} 
+        />
       )}
-      {view === 'product-detail' && selectedProduct && <ProductDetail product={selectedProduct} similarProducts={[]} onBack={() => setView('store-detail')} onAddToCart={addToCart} onBuyNow={(p) => { addToCart(p); setView('checkout'); }} onStoreClick={() => {}} onProductClick={(p) => setSelectedProduct(p)} />}
+      {view === 'product-detail' && selectedProduct && (
+        <ProductDetail 
+          product={selectedProduct} 
+          similarProducts={[]} 
+          onBack={() => setView('store-detail')} 
+          onAddToCart={addToCart} 
+          onBuyNow={(p) => { addToCart(p); setView('checkout'); }} 
+          onStoreClick={() => {}} 
+          onProductClick={(p) => setSelectedProduct(p)}
+          wishlist={wishlist}
+          onToggleWishlist={toggleWishlist}
+        />
+      )}
 
       {isCartOpen && (
         <div className="fixed inset-0 z-[140] flex justify-end">
@@ -670,6 +711,54 @@ const App: React.FC = () => {
                   <button onClick={() => { setView('checkout'); setIsCartOpen(false); }} className="w-full bg-[#049454] text-white py-5 rounded-2xl font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all shrink-0 mx-auto">Proceed to Checkout</button>
                </div>
              )}
+          </div>
+        </div>
+      )}
+
+      {isWishlistOpen && (
+        <div className="fixed inset-0 z-[140] flex justify-end">
+          <div className="absolute inset-0 bg-slate-900/40" onClick={() => setIsWishlistOpen(false)}></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-[#0b1426] flex flex-col shadow-2xl animate-in slide-in-from-right duration-500 overflow-hidden text-left">
+             <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center shrink-0">
+               <h2 className="text-xl font-bold dark:text-white flex items-center gap-2">
+                 <svg className="w-5 h-5 text-rose-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                 Wishlist
+               </h2>
+               <button onClick={() => setIsWishlistOpen(false)} className="text-slate-400 font-bold hover:text-slate-600 shrink-0">Close</button>
+             </div>
+             <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+               {wishlist.length === 0 ? (
+                 <div className="text-center py-20">
+                    <p className="text-slate-400 font-bold mb-4">Your wishlist is empty</p>
+                    <button onClick={() => { setIsWishlistOpen(false); setView('home'); }} className="text-[#049454] font-bold text-sm hover:underline">Explore Products</button>
+                 </div>
+               ) : wishlist.map(item => (
+                    <div key={item.id} className="flex justify-between items-center mb-6 shrink-0 group">
+                      <div className="flex gap-4">
+                        <img src={item.image} className="w-16 h-16 rounded-xl object-cover shrink-0" alt="" />
+                        <div className="flex flex-col text-left shrink-0 justify-center">
+                          <span className="dark:text-white font-bold text-sm mb-1">{item.name}</span>
+                          <span className="text-[#049454] font-extrabold text-sm">₹{item.price}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button 
+                          onClick={() => { addToCart(item); toggleWishlist(item); }}
+                          className="px-4 py-1.5 bg-[#049454] text-white rounded-lg text-[10px] font-bold shadow-sm"
+                        >
+                          Add to Cart
+                        </button>
+                        <button 
+                          onClick={() => toggleWishlist(item)}
+                          className="text-[10px] text-rose-500 font-bold hover:underline text-center"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                 ))
+               }
+             </div>
           </div>
         </div>
       )}

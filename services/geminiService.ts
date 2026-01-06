@@ -33,12 +33,19 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const text = response.text || "Searching your neighborhood...";
-    const links = groundingChunks.filter((c: any) => c.maps?.uri).map((c: any) => ({
-      title: c.maps.title,
-      uri: c.maps.uri
-    }));
+    
+    // Improved link extraction to be more resilient
+    const links: { title: string, uri: string }[] = [];
+    groundingChunks.forEach((chunk: any) => {
+        if (chunk.maps?.uri && chunk.maps?.title) {
+            links.push({
+                title: chunk.maps.title,
+                uri: chunk.maps.uri
+            });
+        }
+    });
 
-    // Step 2: Categorize using a fast text model (Gemini Flash Lite)
+    // Step 2: Categorize using a fast text model
     if (links.length > 0) {
       const categorizationModel = 'gemini-flash-lite-latest';
       const catResponse = await ai.models.generateContent({
@@ -82,7 +89,7 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
   } catch (error) {
     console.error("Gemini Discovery Error:", error);
     return {
-      text: "I couldn't pinpoint nearby shops right now. Please ensure location services are enabled.",
+      text: "I couldn't pinpoint nearby shops right now. Please check if your API key has Maps tools enabled.",
       categories: []
     };
   }
