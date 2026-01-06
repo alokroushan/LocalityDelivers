@@ -238,10 +238,11 @@ const App: React.FC = () => {
       return;
     }
 
+    // Performance optimization: Using default accuracy is much faster than highAccuracy
     const geoOptions = {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
+        enableHighAccuracy: false,
+        timeout: 6000,
+        maximumAge: 60000
     };
 
     navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -250,8 +251,9 @@ const App: React.FC = () => {
       setNearbyDiscovery(result);
       setIsNearbyLoading(false);
     }, (err) => {
-      console.error("Geolocation Error:", err);
-      alert("Locality needs location access to find nearby shops. Please check your browser settings.");
+      console.warn("Geolocation warning, falling back to manual search:", err);
+      alert("Please ensure location access is granted. We'll show featured verified stores while you wait.");
+      setCategoryFilter(null);
       setIsNearbyLoading(false);
     }, geoOptions);
   };
@@ -472,7 +474,7 @@ const App: React.FC = () => {
             appSettings={appSettings}
           />
           <div className="h-20" />
-          <div className="bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 overflow-x-auto custom-scrollbar sticky top-20 z-[110]">
+          <div className="bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 overflow-x-auto custom-scrollbar relative z-[110]">
             <div className="w-full px-6 md:px-12 lg:px-20 flex items-center justify-between gap-6 sm:gap-8 py-4 sm:py-6 min-w-max md:min-w-0">
               {categoryFilter && (
                 <button 

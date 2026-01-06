@@ -3,10 +3,12 @@ import { GoogleGenAI, Type } from "@google/genai";
 export const getLocalRecommendations = async (lat?: number, lng?: number, query: string = "Nearby shops and local businesses") => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Step 1: Discover using Maps Grounding (Gemini 2.5 Flash)
+  // Step 1: Discover using Maps + Search Grounding (Gemini 2.5 Flash)
   const discoveryModel = 'gemini-2.5-flash'; 
   const discoveryConfig: any = {
-    tools: [{ googleMaps: {} }],
+    // Maps grounding is only supported in Gemini 2.5 series
+    // googleMaps may be used with googleSearch
+    tools: [{ googleMaps: {} }, { googleSearch: {} }],
   };
 
   if (lat && lng) {
@@ -23,36 +25,43 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
   try {
     const response = await ai.models.generateContent({
       model: discoveryModel,
-      contents: `Find real, active local shops and small businesses within a 2km radius of my current location. 
-      Query: ${query}. 
-      Act as a hyper-local neighborhood guide. 
-      List 6-8 highly-rated shops that are actually there. 
-      Keep the response text very brief (2 sentences).`,
+      contents: `You are a local neighborhood expert. Find and list 8-12 real, active local shops and small businesses within 2km of the current location. 
+      Context: ${query}. 
+      Mention their names clearly in your response. 
+      Keep the introductory text very short (max 2 sentences).`,
       config: discoveryConfig,
     });
 
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    const text = response.text || "Searching your neighborhood...";
+    const text = response.text || "Scanning your immediate neighborhood for the best gems...";
     
-    // Improved link extraction to be more resilient
+    // Comprehensive extraction from all possible grounding types
     const links: { title: string, uri: string }[] = [];
     groundingChunks.forEach((chunk: any) => {
-        if (chunk.maps?.uri && chunk.maps?.title) {
+        if (chunk.maps?.uri) {
             links.push({
-                title: chunk.maps.title,
+                title: chunk.maps.title || "Local Shop",
                 uri: chunk.maps.uri
+            });
+        } else if (chunk.web?.uri) {
+            links.push({
+                title: chunk.web.title || "Local Business",
+                uri: chunk.web.uri
             });
         }
     });
 
-    // Step 2: Categorize using a fast text model
-    if (links.length > 0) {
-      const categorizationModel = 'gemini-flash-lite-latest';
+    // Deduplicate links by URI
+    const uniqueLinks = Array.from(new Map(links.map(item => [item.uri, item])).values());
+
+    // Step 2: Categorize using the ultra-fast Gemini 3 Flash model
+    if (uniqueLinks.length > 0) {
+      const categorizationModel = 'gemini-3-flash-preview';
       const catResponse = await ai.models.generateContent({
         model: categorizationModel,
-        contents: `Categorize these local shops into 3-4 logical groups (e.g., 'Bakery & Sweets', 'Cafes & Dining', 'Retail & Services'). 
-        Input Shops: ${JSON.stringify(links)}
-        Return only a JSON array of categories.`,
+        contents: `Organize these neighborhood locations into exactly 3 or 4 meaningful categories (e.g., 'Bakery & Sweets', 'Dining & Cafes', 'Retail & Essentials').
+        Data: ${JSON.stringify(uniqueLinks)}
+        Respond strictly with a JSON array.`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -60,7 +69,7 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
             items: {
               type: Type.OBJECT,
               properties: {
-                name: { type: Type.STRING, description: "Category name with a relevant emoji" },
+                name: { type: Type.STRING, description: "Category name starting with a relevant emoji" },
                 shops: {
                   type: Type.ARRAY,
                   items: {
@@ -87,9 +96,9 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 
     return { text, categories: [] };
   } catch (error) {
-    console.error("Gemini Discovery Error:", error);
+    console.error("Discovery Error:", error);
     return {
-      text: "I couldn't pinpoint nearby shops right now. Please check if your API key has Maps tools enabled.",
+      text: "We're currently highlighting our verified community partners. Check out the curated list below!",
       categories: []
     };
   }
@@ -102,7 +111,7 @@ export const getSmartSuggestions = async (cartItems: string[]) => {
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: `Based on these items in a user's local delivery cart: ${cartItems.join(', ')}, suggest 3 other items they might like from a local bakery, deli, or grocery store. Format as a JSON list of objects with 'title' and 'reason'.`,
+      contents: `Analyze these local cart items: ${cartItems.join(', ')}. Suggest 3 complementary local items. Return a JSON list with 'title' and 'reason'.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -121,7 +130,6 @@ export const getSmartSuggestions = async (cartItems: string[]) => {
 
     return JSON.parse(response.text || '[]');
   } catch (error) {
-    console.error("Smart Suggestions Error:", error);
     return [];
   }
 };
