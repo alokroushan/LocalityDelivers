@@ -97,10 +97,3 @@ This setup allows rapid iteration on branding, campaigns, and category focus wit
 - Optimized for short-distance, intra-locality deliveries that support local commerce and reduce logistics overhead.
 
 ---
-
-## 🚀 Getting Started
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/alokroushan/LocalityDelivers.git
-   cd LocalityDelivers
