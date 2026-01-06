@@ -1,4 +1,3 @@
-
 export interface Store {
   id: string;
   name: string;
@@ -12,8 +11,16 @@ export interface Store {
   isVerified?: boolean;
 }
 
+// ChatMessage interface for merchant support conversations
+export interface ChatMessage {
+  sender: 'admin' | 'seller';
+  text: string;
+  timestamp: string;
+}
+
 export interface MerchantOnboardingRequest {
   id: string;
+  userId?: string;
   businessName: string;
   category: string;
   email: string;
@@ -22,8 +29,12 @@ export interface MerchantOnboardingRequest {
   photoUrl: string;
   idProofUrl?: string;
   licenseUrl?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'on_hold';
   submittedAt: string;
+  adminFeedback?: string;
+  additionalDocsRequested?: boolean;
+  // Added chatHistory to MerchantOnboardingRequest
+  chatHistory?: ChatMessage[];
 }
 
 export interface Product {
@@ -50,6 +61,7 @@ export interface Order {
   status: 'Processing' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
   instructions?: string;
   sellerNote?: string;
+  customerEmail: string;
 }
 
 export interface UserProfile {
@@ -58,6 +70,9 @@ export interface UserProfile {
   phone: string;
   address: string;
   joinDate: string;
+  isSeller?: boolean;
+  isAdmin?: boolean;
+  storeId?: string;
 }
 
 export interface AppSettings {

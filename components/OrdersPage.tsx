@@ -6,9 +6,10 @@ interface OrdersPageProps {
   orders: Order[];
   onBack: () => void;
   onCancelOrder?: (orderId: string) => void;
+  onTrackOrder?: (orderId: string) => void;
 }
 
-const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onBack, onCancelOrder }) => {
+const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onBack, onCancelOrder, onTrackOrder }) => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-10 pb-24 px-6 animate-in fade-in duration-500">
       <div className="max-w-5xl mx-auto">
@@ -73,17 +74,23 @@ const OrdersPage: React.FC<OrdersPageProps> = ({ orders, onBack, onCancelOrder }
                   ))}
                 </div>
 
-                <div className="flex flex-wrap gap-4">
-                  {order.status === 'Delivered' && (
-                    <>
-                      <button className="bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">Reorder Items</button>
-                      <button className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 px-6 py-3 rounded-2xl text-xs font-bold text-slate-400 hover:text-[#049454] hover:border-[#049454] transition-all">Leave a Review</button>
-                    </>
+                <div className="flex flex-wrap gap-4 items-center">
+                  {(order.status === 'Processing' || order.status === 'Out for Delivery') && onTrackOrder && (
+                    <button 
+                      onClick={() => onTrackOrder(order.id)}
+                      className="bg-[#049454] text-white px-8 py-3 rounded-2xl text-xs font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                      Track Live Order
+                    </button>
                   )}
-                  {(order.status === 'Processing' || order.status === 'Out for Delivery') && onCancelOrder && (
+                  {order.status === 'Delivered' && (
+                    <button className="bg-slate-50 dark:bg-slate-800 px-6 py-3 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">Reorder Items</button>
+                  )}
+                  {order.status === 'Processing' && onCancelOrder && (
                     <button 
                       onClick={() => onCancelOrder(order.id)}
-                      className="bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-100 dark:border-rose-900/50 px-6 py-3 rounded-2xl text-xs font-bold text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all"
+                      className="text-rose-500 font-bold text-xs hover:underline"
                     >
                       Cancel Order
                     </button>

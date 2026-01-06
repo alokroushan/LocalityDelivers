@@ -1,5 +1,8 @@
 
 import React, { useState } from 'react';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 
 interface AuthPageProps {
   onBack: () => void;
@@ -7,29 +10,44 @@ interface AuthPageProps {
   error?: string | null;
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [role, setRole] = useState<'customer' | 'seller'>('customer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLocalError(null);
-    
-    // Check for Admin Credentials
-    if (mode === 'signin' && email.toLowerCase() === 'loca@gmail.com') {
-      if (password === 'loca01') {
-        onLogin(email, false, false);
-        return;
-      } else {
-        setLocalError("Invalid password for admin account.");
-        return;
-      }
-    }
+    setError(null);
+    setLoading(true);
 
-    onLogin(email, role === 'seller', mode === 'signup');
+    try {
+      if (mode === 'signup') {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        const isAdmin = email.toLowerCase() === 'loca@gmail.com';
+        
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          name: email.split('@')[0],
+          email: email,
+          isSeller: role === 'seller',
+          isAdmin: isAdmin,
+          joinDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        });
+        
+        onLogin(email, role === 'seller', true);
+      } else {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
+        const userData = userDoc.data();
+        onLogin(email, userData?.isSeller || false, false);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,7 +68,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
           </p>
         </div>
         <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 -left-20 w-64 h-64 bg-emerald-400/10 rounded-full blur-2xl"></div>
       </div>
       
       <div className="flex-1 flex items-center justify-center p-8 md:p-24 bg-white dark:bg-slate-900">
@@ -60,9 +77,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
               {mode === 'signin' ? 'Welcome back' : 'Create an account'}
             </h2>
             
-            {(error || localError) && (
-              <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 p-4 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
-                <p className="text-sm font-bold text-rose-500">{error || localError}</p>
+            {error && (
+              <div className="bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 p-4 rounded-2xl">
+                <p className="text-sm font-bold text-rose-500">{error}</p>
               </div>
             )}
             
@@ -85,12 +102,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {mode === 'signup' && (
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">{role === 'customer' ? 'Full Name' : 'Business Name'}</label>
-                <input required type="text" placeholder={role === 'customer' ? "Alex Johnson" : "Local Bakery Co."} className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all" />
-              </div>
-            )}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
               <input 
@@ -99,7 +110,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com" 
-                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all" 
+                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all font-medium" 
               />
             </div>
             <div className="space-y-2">
@@ -110,19 +121,19 @@ const AuthPage: React.FC<AuthPageProps> = ({ onBack, onLogin, error }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••" 
-                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all" 
+                className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-slate-950 dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 transition-all font-medium" 
               />
             </div>
 
-            <button type="submit" className="w-full bg-[#049454] text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.01] active:scale-[0.99]">
-              {mode === 'signin' ? `Sign In as ${role === 'seller' ? 'Seller' : 'Customer'}` : `Join as ${role === 'seller' ? 'Seller' : 'Customer'}`}
+            <button disabled={loading} type="submit" className="w-full bg-[#049454] text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50">
+              {loading ? 'Processing...' : (mode === 'signin' ? `Sign In` : `Join Now`)}
             </button>
           </form>
 
           <div className="text-center">
             <button 
               type="button"
-              onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setLocalError(null); }}
+              onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}
               className="text-sm font-bold text-[#049454] hover:underline"
             >
               {mode === 'signin' ? "Don't have an account? Sign up" : "Already have an account? Sign in"}

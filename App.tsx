@@ -1,5 +1,7 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, onSnapshot, setDoc, collection, query, deleteDoc, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import Navbar from './components/Navbar';
 import StoreCard from './components/StoreCard';
 import StoreDetail from './components/StoreDetail';
@@ -8,61 +10,12 @@ import CheckoutPage from './components/CheckoutPage';
 import AuthPage from './components/AuthPage';
 import ProfilePage from './components/ProfilePage';
 import OrdersPage from './components/OrdersPage';
+import OrderTracking from './components/OrderTracking';
 import SellerDashboardPage from './components/SellerDashboardPage';
 import SellerVerificationPage from './components/SellerVerificationPage';
 import AdminDashboardPage from './components/AdminDashboardPage';
-import { Store, Product, CartItem, Order, UserProfile, HeroSlide, MerchantOnboardingRequest, AppSettings, CategoryItem } from './types';
-
-// Helper for local storage
-const getStored = <T,>(key: string, fallback: T): T => {
-  const saved = localStorage.getItem(key);
-  if (!saved) return fallback;
-  try {
-    return JSON.parse(saved) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-const INITIAL_STORES: Store[] = [
-  { id: '1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 49, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.', isVerified: true },
-  { id: '2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 79, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.', isVerified: true },
-  { id: '3', name: 'Bansal Stationaries', category: 'Stationary', rating: 4.5, deliveryTime: '15-20 min', deliveryFee: 20, image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=800', description: 'All your academic essentials, from notebooks to high-quality pens.' },
-  { id: '4', name: 'Radhe Shyam PG', category: 'Hostel/PG', rating: 4.8, deliveryTime: 'Immediate', deliveryFee: 0, image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&q=80&w=800', description: 'Premium student accommodation with modern amenities and meal services.' },
-  { id: '5', name: 'The Pizza Corner', category: 'Pizza Corner', rating: 4.6, deliveryTime: '35-45 min', deliveryFee: 40, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', description: 'Authentic wood-fired pizzas with a variety of local toppings.' },
-  { id: '6', name: 'Agarwal Plastic Shop', category: 'Plastic Shop', rating: 4.4, deliveryTime: '20-30 min', deliveryFee: 30, image: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?auto=format&fit=crop&q=80&w=800', description: 'Quality household plasticware, containers, and kitchen essentials.' },
-];
-
-const INITIAL_PRODUCTS: Record<string, Product[]> = {
-  '1': [
-    { id: 'p1', storeId: '1', name: 'Sourdough Loaf', price: 250, image: 'https://images.unsplash.com/photo-1585478259715-876a6a81fc08?auto=format&fit=crop&w=400', description: '24-hour fermented classic sourdough.', rating: 4.8, reviewCount: 124 },
-    { id: 'p2', storeId: '1', name: 'Almond Croissant', price: 180, image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400', description: 'Double-baked with house-made frangipane.', rating: 4.9, reviewCount: 86 },
-  ],
-  '2': [
-    { id: 'p4', storeId: '2', name: 'Organic Avocado', price: 120, image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=400', description: 'Perfectly ripe Hass avocado.', rating: 4.9, reviewCount: 210 },
-  ],
-  '3': [
-    { id: 'p5', storeId: '3', name: 'Luxury Journal', price: 599, image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400', description: 'Leather-bound journal with 120gsm paper.', rating: 4.7, reviewCount: 45 },
-  ],
-};
-
-const INITIAL_HERO_SLIDES: HeroSlide[] = [
-  { image: 'https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&q=80&w=1200', category: 'Hostel/PG', color: 'bg-amber-100/40 dark:bg-amber-950/20' },
-  { image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1200', category: 'Grocery', color: 'bg-emerald-100/40 dark:bg-emerald-950/20' },
-  { image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1200', category: 'Pizza Corner', color: 'bg-orange-100/40 dark:bg-orange-950/20' },
-  { image: 'https://images.unsplash.com/photo-1456735190827-d1262f71b8a3?auto=format&fit=crop&q=80&w=1200', category: 'Stationary', color: 'bg-sky-100/40 dark:bg-sky-950/20' },
-];
-
-const INITIAL_CATEGORIES: CategoryItem[] = [
-  { name: 'Grocery', icon: '🥕', hasDropdown: false },
-  { name: 'Bakery', icon: '🥐', hasDropdown: true },
-  { name: 'Pizza Corner', icon: '🍕', hasDropdown: false },
-  { name: 'Stationary', icon: '📚', hasDropdown: true },
-  { name: 'Hostel/PG', icon: '🏠', hasDropdown: true },
-  { name: 'Plastic Shop', icon: '📦', hasDropdown: true },
-  { name: 'Home Services', icon: '🛠️', hasDropdown: false },
-  { name: 'Nearby Shops', icon: '📍', hasDropdown: false },
-];
+import { Store, Product, CartItem, Order, UserProfile, AppSettings, CategoryItem, HeroSlide, MerchantOnboardingRequest } from './types';
+import { getLocalRecommendations } from './services/geminiService';
 
 const INITIAL_APP_SETTINGS: AppSettings = {
   navTitle: 'Locality',
@@ -76,79 +29,238 @@ const INITIAL_APP_SETTINGS: AppSettings = {
   footerText: '© 2024 LOCALITY NETWORK. SUPPORTING LOCAL MERCHANTS.'
 };
 
-const INITIAL_REGISTERED_USERS = [
-  { email: 'alex.j@locality.com', isSeller: false },
-  { email: 'seller@locality.com', isSeller: true },
-  { email: 'loca@gmail.com', isSeller: false, isAdmin: true }
+const INITIAL_CATEGORIES: CategoryItem[] = [
+  { name: 'Grocery', icon: '🥕', hasDropdown: false },
+  { name: 'Bakery', icon: '🥐', hasDropdown: true },
+  { name: 'Pizza Corner', icon: '🍕', hasDropdown: false },
+  { name: 'Stationary', icon: '📚', hasDropdown: true },
+  { name: 'Hostel/PG', icon: '🏠', hasDropdown: true },
+  { name: 'Plastic Shop', icon: '📦', hasDropdown: true },
+  { name: 'Home Services', icon: '🛠️', hasDropdown: false },
+  { name: 'Nearby Shops', icon: '📍', hasDropdown: false },
 ];
 
+const INITIAL_HERO_SLIDES: HeroSlide[] = [
+  {
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1600',
+    category: 'Grocery',
+    color: 'bg-emerald-100/40 dark:bg-emerald-950/20'
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=1600',
+    category: 'Bakery',
+    color: 'bg-amber-100/40 dark:bg-amber-950/20'
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&q=80&w=1600',
+    category: 'Stationary',
+    color: 'bg-sky-100/40 dark:bg-sky-950/20'
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=1600',
+    category: 'Pizza Corner',
+    color: 'bg-orange-100/40 dark:bg-orange-950/20'
+  }
+];
+
+const INITIAL_STORES: Store[] = [
+  { id: 's1', name: 'The Village Bakery', category: 'Bakery', rating: 4.9, deliveryTime: '20-30 min', deliveryFee: 40, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=800', description: 'Artisanal breads and morning pastries baked daily with organic flour.', isVerified: true },
+  { id: 's2', name: 'Green Leaf Grocer', category: 'Grocery', rating: 4.7, deliveryTime: '30-45 min', deliveryFee: 30, image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800', description: 'The freshest seasonal produce from local community farms.', isVerified: true },
+  { id: 's3', name: 'Bansal Stationaries', category: 'Stationary', rating: 4.5, deliveryTime: '15-20 min', deliveryFee: 20, image: 'https://images.unsplash.com/photo-1503551723145-6c040742065b?auto=format&fit=crop&q=80&w=800', description: 'All your academic essentials, from notebooks to high-quality pens.', isVerified: false },
+  { id: 's4', name: 'Radhe Shyam PG', category: 'Hostel/PG', rating: 4.8, deliveryTime: 'IMMEDIATE', deliveryFee: 0, image: 'https://images.unsplash.com/photo-1522770179533-24471fcdba45?auto=format&fit=crop&q=80&w=800', description: 'Premium student accommodation with modern amenities and meal services.', isVerified: false },
+  { id: 's5', name: 'The Pizza Corner', category: 'Pizza Corner', rating: 4.6, deliveryTime: '35-45 min', deliveryFee: 50, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&q=80&w=800', description: 'Authentic wood-fired pizzas with a variety of local toppings.', isVerified: false },
+  { id: 's6', name: 'Agarwal Plastic Shop', category: 'Plastic Shop', rating: 4.4, deliveryTime: '20-30 min', deliveryFee: 15, image: 'https://images.unsplash.com/photo-1605152276897-4f618f831968?auto=format&fit=crop&q=80&w=800', description: 'Quality household plasticware, containers, and kitchen essentials.', isVerified: false },
+  { id: 's7', name: 'Modern Medicals', category: 'Home Services', rating: 4.9, deliveryTime: '10-15 min', deliveryFee: 25, image: 'https://images.unsplash.com/photo-1586015555751-63bb77f4322a?auto=format&fit=crop&q=80&w=800', description: 'Reliable neighborhood pharmacy with emergency home delivery services.', isVerified: true },
+  { id: 's8', name: 'Pet Paradise', category: 'Nearby Shops', rating: 4.7, deliveryTime: '25-40 min', deliveryFee: 45, image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&q=80&w=800', description: 'Everything your pets need, from premium nutrition to grooming supplies.', isVerified: true }
+];
+
+const INITIAL_PRODUCTS: Record<string, Product[]> = {
+  's1': [
+    { id: 'p1', storeId: 's1', name: 'Sourdough Loaf', price: 120, image: 'https://images.unsplash.com/photo-1585478259715-876a6a81b764?auto=format&fit=crop&q=80&w=400', description: 'Crusty outside, soft inside. Perfect for sandwiches.', rating: 4.8, reviewCount: 12 },
+    { id: 'p2', storeId: 's1', name: 'Butter Croissant', price: 65, image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=400', description: 'Flaky, buttery layers made with French butter.', rating: 4.9, reviewCount: 25 }
+  ],
+  's2': [
+    { id: 'p3', storeId: 's2', name: 'Organic Spinach', price: 40, image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&q=80&w=400', description: 'Freshly picked farm spinach.', rating: 4.7, reviewCount: 45 }
+  ]
+};
+
 const App: React.FC = () => {
-  // --- Persistent States ---
-  const [stores, setStores] = useState<Store[]>(() => getStored('locality_stores', INITIAL_STORES));
-  const [allProducts, setAllProducts] = useState<Record<string, Product[]>>(() => getStored('locality_products', INITIAL_PRODUCTS));
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => getStored('locality_hero', INITIAL_HERO_SLIDES));
-  const [onboardingRequests, setOnboardingRequests] = useState<MerchantOnboardingRequest[]>(() => getStored('locality_onboarding', []));
-  const [appSettings, setAppSettings] = useState<AppSettings>(() => getStored('locality_settings', INITIAL_APP_SETTINGS));
-  const [categories, setCategories] = useState<CategoryItem[]>(() => getStored('locality_categories', INITIAL_CATEGORIES));
-  const [registeredUsers, setRegisteredUsers] = useState<{email: string, isSeller: boolean, isAdmin?: boolean}[]>(() => getStored('locality_users', INITIAL_REGISTERED_USERS));
-  const [orderHistory, setOrderHistory] = useState<Order[]>(() => getStored('locality_orders', []));
+  const [stores, setStores] = useState<Store[]>([]);
+  const [allProducts, setAllProducts] = useState<Record<string, Product[]>>({});
+  const [appSettings, setAppSettings] = useState<AppSettings>(INITIAL_APP_SETTINGS);
+  const [categories, setCategories] = useState<CategoryItem[]>(INITIAL_CATEGORIES);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(INITIAL_HERO_SLIDES);
+  const [allOrders, setAllOrders] = useState<(Order & { customerEmail: string })[]>([]);
+  const [onboardingRequests, setOnboardingRequests] = useState<MerchantOnboardingRequest[]>([]);
+  
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSeller, setIsSeller] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [sellerStoreId, setSellerStoreId] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile>({ name: 'Guest', email: '', phone: '', address: '', joinDate: '' });
 
-  // --- Session State (Fixes Logout on Refresh) ---
-  const [isLoggedIn, setIsLoggedIn] = useState(() => getStored('locality_isLoggedIn', false));
-  const [isSeller, setIsSeller] = useState(() => getStored('locality_isSeller', false));
-  const [isAdmin, setIsAdmin] = useState(() => getStored('locality_isAdmin', false));
-  const [sellerStoreId, setSellerStoreId] = useState<string | null>(() => getStored('locality_sellerStoreId', null));
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => getStored('locality_profile', {
-    name: 'Guest',
-    email: '',
-    phone: '',
-    address: '',
-    joinDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }));
+  const [recoveryUser, setRecoveryUser] = useState<any>(null);
 
-  // --- UI State (Not persisted) ---
-  const [view, setView] = useState<'home' | 'auth' | 'profile' | 'orders' | 'store-detail' | 'product-detail' | 'checkout' | 'seller-dashboard' | 'seller-verification' | 'admin-dashboard'>('home');
+  const [view, setView] = useState<'home' | 'auth' | 'profile' | 'orders' | 'order-tracking' | 'store-detail' | 'product-detail' | 'checkout' | 'seller-dashboard' | 'seller-verification' | 'admin-dashboard'>('home');
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => getStored('locality_darkMode', false));
-  const [language, setLanguage] = useState('English');
-  const [heroIndex, setHeroIndex] = useState(0);
+  // DEFAULT THEME: Set initial state to true for Dark Mode
+  const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  // --- Effects for Persistence ---
-  useEffect(() => { localStorage.setItem('locality_stores', JSON.stringify(stores)); }, [stores]);
-  useEffect(() => { localStorage.setItem('locality_products', JSON.stringify(allProducts)); }, [allProducts]);
-  useEffect(() => { localStorage.setItem('locality_hero', JSON.stringify(heroSlides)); }, [heroSlides]);
-  useEffect(() => { localStorage.setItem('locality_onboarding', JSON.stringify(onboardingRequests)); }, [onboardingRequests]);
-  useEffect(() => { localStorage.setItem('locality_settings', JSON.stringify(appSettings)); }, [appSettings]);
-  useEffect(() => { localStorage.setItem('locality_categories', JSON.stringify(categories)); }, [categories]);
-  useEffect(() => { localStorage.setItem('locality_users', JSON.stringify(registeredUsers)); }, [registeredUsers]);
-  useEffect(() => { localStorage.setItem('locality_orders', JSON.stringify(orderHistory)); }, [orderHistory]);
-  useEffect(() => { localStorage.setItem('locality_profile', JSON.stringify(userProfile)); }, [userProfile]);
+  const [loading, setLoading] = useState(true);
   
-  useEffect(() => { localStorage.setItem('locality_isLoggedIn', JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
-  useEffect(() => { localStorage.setItem('locality_isSeller', JSON.stringify(isSeller)); }, [isSeller]);
-  useEffect(() => { localStorage.setItem('locality_isAdmin', JSON.stringify(isAdmin)); }, [isAdmin]);
-  useEffect(() => { localStorage.setItem('locality_sellerStoreId', JSON.stringify(sellerStoreId)); }, [sellerStoreId]);
-  useEffect(() => { localStorage.setItem('locality_darkMode', JSON.stringify(darkMode)); }, [darkMode]);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  // Categorized Discovery State
+  const [nearbyDiscovery, setNearbyDiscovery] = useState<{ text: string, categories: any[] } | null>(null);
+  const [isNearbyLoading, setIsNearbyLoading] = useState(false);
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setRecoveryUser(null);
+        const isLocaAdmin = user.email?.toLowerCase() === 'loca@gmail.com';
+        
+        // ADMIN RECOVERY DISPLAY: Set default System Admin profile immediately if email matches
+        if (isLocaAdmin) {
+          setIsAdmin(true);
+          setUserProfile(prev => ({
+            ...prev,
+            name: 'System Admin',
+            email: user.email || '',
+            isAdmin: true
+          }));
+        }
+
+        onSnapshot(doc(db, 'users', user.uid), (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            setUserProfile({
+              name: data.name || (isLocaAdmin ? 'System Admin' : user.displayName) || 'Neighbor',
+              email: user.email || '',
+              phone: data.phone || '',
+              address: data.address || '',
+              joinDate: data.joinDate || '2024'
+            });
+            setIsSeller(data.isSeller || false);
+            setIsAdmin(data.isAdmin || isLocaAdmin);
+            setSellerStoreId(data.storeId || null);
+          } else if (isLocaAdmin) {
+            // Ensure Admin name stays "System Admin" even if no firestore profile doc exists
+            setUserProfile(prev => ({
+                ...prev,
+                name: 'System Admin',
+                email: user.email || '',
+                isAdmin: true
+            }));
+          }
+        });
+      } else {
+        if (!recoveryUser) {
+            setIsLoggedIn(false);
+            setUserProfile({ name: 'Guest', email: '', phone: '', address: '', joinDate: '' });
+            setIsSeller(false);
+            setIsAdmin(false);
+            setSellerStoreId(null);
+        }
+      }
+      setLoading(false);
+    });
+
+    const unsubStores = onSnapshot(collection(db, 'stores'), (snap) => {
+      const dbStores = snap.docs.map(d => ({ id: d.id, ...d.data() } as Store & { isDeleted?: boolean }));
+      const storeMap = new Map<string, Store & { isDeleted?: boolean }>();
+      INITIAL_STORES.forEach(s => storeMap.set(s.id, s));
+      dbStores.forEach(s => {
+        const existing = storeMap.get(s.id);
+        storeMap.set(s.id, { ...(existing || {}), ...s });
+      });
+      setStores(Array.from(storeMap.values()).filter(s => !s.isDeleted));
+    });
+
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snap) => {
+      const dbProducts = snap.docs.map(d => ({ id: d.id, ...d.data() } as Product & { isDeleted?: boolean }));
+      const map: Record<string, Product[]> = {};
+      Object.keys(INITIAL_PRODUCTS).forEach(sid => { map[sid] = [...INITIAL_PRODUCTS[sid]]; });
+      dbProducts.forEach(p => {
+        if (!map[p.storeId]) map[p.storeId] = [];
+        const existingIdx = map[p.storeId].findIndex(item => item.id === p.id);
+        if (p.isDeleted) { if (existingIdx > -1) map[p.storeId].splice(existingIdx, 1); } 
+        else {
+           if (existingIdx > -1) map[p.storeId][existingIdx] = { ...map[p.storeId][existingIdx], ...p };
+           else map[p.storeId].push(p);
+        }
+      });
+      setAllProducts(map);
+    });
+
+    const unsubOrders = onSnapshot(collection(db, 'orders'), (snap) => {
+      setAllOrders(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+    });
+
+    const unsubOnboarding = onSnapshot(collection(db, 'merchant_requests'), (snap) => {
+      setOnboardingRequests(snap.docs.map(d => ({ id: d.id, ...d.data() } as MerchantOnboardingRequest)));
+    });
+
+    const unsubSettings = onSnapshot(doc(db, 'config', 'app_settings'), (snap) => {
+      if (snap.exists()) setAppSettings(snap.data() as AppSettings);
+    });
+
+    const unsubCats = onSnapshot(doc(db, 'config', 'categories'), (snap) => {
+      if (snap.exists()) setCategories(snap.data().list || INITIAL_CATEGORIES);
+    });
+
+    const unsubHero = onSnapshot(doc(db, 'config', 'hero_slides'), (snap) => {
+      if (snap.exists()) setHeroSlides(snap.data().list || INITIAL_HERO_SLIDES);
+    });
+
+    return () => { unsubAuth(); unsubStores(); unsubProducts(); unsubOrders(); unsubSettings(); unsubCats(); unsubHero(); unsubOnboarding(); };
+  }, [recoveryUser]);
+
+  // Handle "Nearby Shops" categorized real-time discovery
+  useEffect(() => {
+    if (categoryFilter === 'Nearby Shops') {
+      handleFetchNearby();
+    } else {
+      setNearbyDiscovery(null);
+    }
+  }, [categoryFilter]);
+
+  const handleFetchNearby = () => {
+    setIsNearbyLoading(true);
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      setIsNearbyLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      const result = await getLocalRecommendations(latitude, longitude, "Best neighborhood stores and hidden gems");
+      setNearbyDiscovery(result);
+      setIsNearbyLoading(false);
+    }, (err) => {
+      console.error(err);
+      setIsNearbyLoading(false);
+    });
+  };
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroIndex(prev => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   }, [darkMode]);
-
-  useEffect(() => {
-    if (view === 'home') {
-      const interval = setInterval(() => {
-        setHeroIndex((prev) => (prev + 1) % heroSlides.length);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [view, heroSlides.length]);
 
   const filteredStores = useMemo(() => {
     return stores.filter(store => {
@@ -163,360 +275,393 @@ const App: React.FC = () => {
   const addToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-      }
+      if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       return [...prev, { ...product, quantity: 1 }];
     });
   };
 
-  const handleOrderSuccess = (instructions?: string) => {
-    const newOrder: Order = {
-      id: `LOC-${Math.floor(1000 + Math.random() * 9000)}`,
+  const handleHeroClick = () => {
+    const currentSlide = heroSlides[heroIndex];
+    if (currentSlide && currentSlide.category) {
+      const matched = categories.find(c => c.name.toLowerCase() === currentSlide.category.toLowerCase());
+      if (matched) setCategoryFilter(matched.name);
+    }
+    document.getElementById('stores-grid')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleShopNow = () => {
+    setCategoryFilter(null);
+    document.getElementById('stores-grid')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleOrderSuccess = async (instructions?: string) => {
+    if (!isLoggedIn) { setView('auth'); return; }
+    const orderId = `LOC-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newOrder = {
+      id: orderId,
       date: new Date().toISOString().split('T')[0],
       items: [...cart],
       total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 79,
       status: 'Processing',
-      instructions
+      instructions,
+      customerEmail: userProfile.email
     };
-    setOrderHistory(prev => [newOrder, ...prev]);
+    await setDoc(doc(db, 'orders', orderId), newOrder);
     setCart([]);
     setView('orders');
   };
 
-  const handleAddProduct = (storeId: string, product: Product) => {
-    setAllProducts(prev => ({ ...prev, [storeId]: [...(prev[storeId] || []), product] }));
-  };
-
-  const handleUpdateProduct = (storeId: string, updatedProduct: Product) => {
-    setAllProducts(prev => ({ ...prev, [storeId]: (prev[storeId] || []).map(p => p.id === updatedProduct.id ? updatedProduct : p) }));
-  };
-
-  const handleDeleteProduct = (storeId: string, productId: string) => {
-    setAllProducts(prev => ({ ...prev, [storeId]: (prev[storeId] || []).filter(p => p.id !== productId) }));
-  };
-
-  const handleUpdateStore = (updatedStore: Store) => {
-    setStores(prev => prev.map(s => s.id === updatedStore.id ? updatedStore : s));
-  };
-
-  const handleDeleteStore = (storeId: string) => {
-    setStores(prev => prev.filter(s => s.id !== storeId));
-    if (sellerStoreId === storeId) {
-      setIsSeller(false);
-      setSellerStoreId(null);
-    }
-  };
-
-  const handleProcessOrder = (orderId: string, note: string) => {
-    setOrderHistory(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Out for Delivery', sellerNote: note } : o));
-  };
-
-  const handleAuthSuccess = (email: string, seller: boolean, isSignUp: boolean) => {
-    const existingUser = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (email.toLowerCase() === 'loca@gmail.com') {
-      setIsLoggedIn(true);
-      setIsAdmin(true);
-      setIsSeller(false);
-      setUserProfile({ name: 'System Admin', email: 'loca@gmail.com', phone: '', address: '', joinDate: 'March 2024' });
-      setView('admin-dashboard');
-      return;
+  const handleLogin = (email: string, isSeller: boolean, isSignUp: boolean, recoveryData?: any) => {
+    const targetEmail = email.toLowerCase().trim();
+    if (targetEmail === 'loca@gmail.com' || recoveryData?.isAdmin) {
+        setIsAdmin(true);
+        setIsLoggedIn(true);
+        setUserProfile({
+            name: 'System Admin',
+            email: targetEmail,
+            phone: '',
+            address: 'Headquarters',
+            joinDate: 'Genesis'
+        });
+        setView('home');
+        return;
     }
 
-    if (isSignUp) {
-      if (existingUser) {
-        setAuthError("An account with this email already exists. Please sign in.");
-        return;
-      }
-      const newUser = { email, isSeller: seller };
-      setRegisteredUsers(prev => [...prev, newUser]);
-      // If signing up as seller, go to verification
-      if (seller) {
-        setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0] }));
-        setView('seller-verification');
-        return;
-      }
+    if (recoveryData?.isRecovery) {
+        setRecoveryUser(recoveryData);
+        setIsLoggedIn(true);
+        setIsSeller(true);
+        setSellerStoreId(recoveryData.storeId);
+        setUserProfile({
+            name: recoveryData.storeName || 'Merchant',
+            email: targetEmail,
+            phone: '',
+            address: '',
+            joinDate: 'Recovered Access'
+        });
+        setView('home');
     } else {
-      if (!existingUser) {
-        setAuthError("No account found with this email. Please sign up instead.");
-        return;
-      }
-      if (existingUser.isSeller !== seller) {
-        setAuthError(`This account is registered as a ${existingUser.isSeller ? 'Seller' : 'Customer'}. Please switch roles above.`);
-        return;
-      }
+        if (isSignUp && isSeller) setView('seller-verification');
+        else setView('home');
     }
+  };
 
-    setAuthError(null);
-    setIsLoggedIn(true);
-    setIsSeller(seller);
-    setIsAdmin(false);
+  const handleApproveMerchant = async (reqId: string) => {
+    const req = onboardingRequests.find(r => r.id === reqId);
+    if (!req) return;
     
-    if (seller) {
-      const myStore = stores.find(s => s.name.toLowerCase().includes(email.split('@')[0].toLowerCase()));
-      setSellerStoreId(myStore ? myStore.id : null);
+    const storeId = `s-${Date.now()}`;
+    await setDoc(doc(db, 'stores', storeId), {
+      id: storeId,
+      name: req.businessName ?? 'Unnamed Local Merchant',
+      category: req.category ?? 'Local Business',
+      image: req.photoUrl ?? 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
+      description: (req as any).description ?? `A verified local merchant supporting the neighborhood.`,
+      rating: 5.0,
+      deliveryFee: 40,
+      deliveryTime: '20-30 min',
+      isVerified: true,
+      email: req.email,
+      ownerId: req.userId
+    });
+
+    await updateDoc(doc(db, 'users', (req as any).userId), {
+      isSeller: true,
+      storeId: storeId
+    });
+
+    await updateDoc(doc(db, 'merchant_requests', reqId), {
+      status: 'approved'
+    });
+  };
+
+  const handleRejectMerchant = async (reqId: string, feedback: string) => {
+    await updateDoc(doc(db, 'merchant_requests', reqId), {
+      status: 'rejected',
+      adminFeedback: feedback
+    });
+  };
+
+  const handleHoldMerchant = async (reqId: string, feedback: string) => {
+    await updateDoc(doc(db, 'merchant_requests', reqId), {
+      status: 'on_hold',
+      adminFeedback: feedback
+    });
+  };
+
+  const handleSendChatMessage = async (requestId: string, sender: 'admin' | 'seller', text: string) => {
+    await updateDoc(doc(db, 'merchant_requests', requestId), {
+      chatHistory: arrayUnion({
+        sender,
+        text,
+        timestamp: new Date().toISOString()
+      })
+    });
+  };
+
+  const handleDeleteStore = async (id: string) => {
+    try {
+        await setDoc(doc(db, 'stores', id), { isDeleted: true }, { merge: true });
+        setStores(prev => prev.filter(s => s.id !== id));
+    } catch (err) {
+        console.error("Delete Error:", err);
     }
-
-    setUserProfile(prev => ({ ...prev, email, name: email.split('@')[0] }));
-    setView('home');
   };
 
-  const handleVerificationComplete = (storeDetails?: any) => {
-    if (storeDetails) {
-        const newStore: Store = {
-            id: `s-${Date.now()}`,
-            name: storeDetails.name,
-            category: storeDetails.category,
-            image: storeDetails.image,
-            description: storeDetails.description,
-            rating: 5.0,
-            deliveryTime: '25-35 min',
-            deliveryFee: 40,
-            isVerified: false
-        };
-        setStores(prev => [newStore, ...prev]);
-        setSellerStoreId(newStore.id);
+  const handleSignOut = () => {
+    if (recoveryUser || isAdmin) {
+        setRecoveryUser(null);
+        setIsAdmin(false);
+        setIsLoggedIn(false);
+        setView('home');
+    } else {
+        signOut(auth).then(() => setView('home'));
     }
-    setIsLoggedIn(true);
-    setIsSeller(true);
-    setView('seller-dashboard');
   };
 
-  const handleApproveMerchant = (requestId: string) => {
-    const request = onboardingRequests.find(r => r.id === requestId);
-    if (!request) return;
-    setOnboardingRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'approved' } : r));
-    setStores(prev => prev.map(s => s.name === request.businessName ? { ...s, isVerified: true } : s));
-  };
+  const userRequest = useMemo(() => {
+    const uid = recoveryUser ? recoveryUser.ownerId : auth.currentUser?.uid;
+    if (!uid) return null;
+    return onboardingRequests.find(r => r.userId === uid);
+  }, [onboardingRequests, auth.currentUser, recoveryUser]);
 
-  const handleRejectMerchant = (requestId: string) => {
-    setOnboardingRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: 'rejected' } : r));
-  };
-
-  const scrollToMain = () => {
-    const mainElement = document.querySelector('main');
-    if (mainElement) { window.scrollTo({ top: mainElement.offsetTop - 100, behavior: 'smooth' }); }
-  };
-
-  const handleHeroClick = (category: string) => {
-    setCategoryFilter(category === categoryFilter ? null : category);
-    setSearchQuery('');
-    scrollToMain();
-  };
-
-  const onSignOut = () => {
-    setIsLoggedIn(false);
-    setIsSeller(false);
-    setIsAdmin(false);
-    setSellerStoreId(null);
-    setUserProfile({ name: 'Guest', email: '', phone: '', address: '', joinDate: '' });
-    setView('home');
-  };
-
-  const isIconUrl = (icon: string) => icon.startsWith('http') || icon.startsWith('/') || icon.startsWith('data:');
+  if (loading) return <div className="h-screen flex items-center justify-center bg-white dark:bg-slate-950"><div className="w-12 h-12 border-4 border-[#049454] border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-white dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300`}>
+    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-white dark:bg-slate-950 font-sans transition-colors duration-300`}>
       {['home', 'store-detail', 'product-detail'].includes(view) && (
-        <Navbar 
-          onCartClick={() => setIsCartOpen(true)} 
-          cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} 
-          onSearch={(query) => { setSearchQuery(query); setCategoryFilter(null); scrollToMain(); }}
-          onSignInClick={() => { setAuthError(null); setView('auth'); }}
-          user={isLoggedIn ? { ...userProfile, isSeller, isAdmin } : null}
-          onSignOut={onSignOut}
-          darkMode={darkMode}
-          toggleDarkMode={() => setDarkMode(!darkMode)}
-          language={language}
-          setLanguage={setLanguage}
-          onOpenModal={(m) => setView(m as any)}
-          appSettings={appSettings}
-        />
+        <>
+          <Navbar 
+            onCartClick={() => setIsCartOpen(true)} 
+            cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)} 
+            onSearch={(q) => setSearchQuery(q)}
+            onSignInClick={() => setView('auth')}
+            user={isLoggedIn ? { ...userProfile, isSeller, isAdmin } : null}
+            onSignOut={handleSignOut}
+            darkMode={darkMode}
+            toggleDarkMode={() => setDarkMode(!darkMode)}
+            language="English"
+            setLanguage={() => {}}
+            onOpenModal={(m) => setView(m as any)}
+            appSettings={appSettings}
+          />
+          <div className="h-20" />
+          <div className="bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 overflow-x-auto custom-scrollbar sticky top-20 z-[110]">
+            <div className="w-full px-6 md:px-12 lg:px-20 flex items-center justify-between gap-6 sm:gap-8 py-4 sm:py-6 min-w-max md:min-w-0">
+              {categoryFilter && (
+                <button 
+                  onClick={() => setCategoryFilter(null)}
+                  className="flex flex-col items-center gap-1.5 group transition-all transform hover:scale-105 shrink-0"
+                >
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 text-rose-500">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                  </div>
+                  <span className="text-[10px] font-bold whitespace-nowrap tracking-tight text-rose-500">Clear</span>
+                </button>
+              )}
+              {categories.map((cat) => (
+                <button 
+                  key={cat.name} 
+                  onClick={() => setCategoryFilter(cat.name === categoryFilter ? null : cat.name)} 
+                  className={`flex flex-col items-center gap-1.5 group transition-all transform hover:scale-105 shrink-0 ${categoryFilter === cat.name ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
+                >
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl bg-slate-50 dark:bg-slate-900 border ${categoryFilter === cat.name ? 'border-[#049454] bg-[#049454]/5' : 'border-slate-100 dark:border-slate-800'}`}>
+                    {cat.icon}
+                  </div>
+                  <span className={`text-[10px] font-bold whitespace-nowrap tracking-tight ${categoryFilter === cat.name ? 'text-[#049454]' : 'text-slate-600 dark:text-slate-300'}`}>{cat.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
-      {view === 'auth' && (
-        <AuthPage 
-          onBack={() => { setAuthError(null); setView('home'); }} 
-          onLogin={handleAuthSuccess} 
-          error={authError}
-        />
-      )}
+      {view === 'auth' && <AuthPage onBack={() => setView('home')} onLogin={handleLogin} />}
+      {view === 'seller-verification' && <SellerVerificationPage onBack={() => setView('home')} onComplete={(details) => setDoc(doc(db, 'merchant_requests', `REQ-${Date.now()}`), { ...details, userId: auth.currentUser?.uid, email: auth.currentUser?.email, status: 'pending', submittedAt: new Date().toISOString() }).then(() => setView('home'))} />}
+      {view === 'profile' && <ProfilePage profile={userProfile} onBack={() => setView('home')} onUpdate={(p) => isLoggedIn && !recoveryUser && setDoc(doc(db, 'users', auth.currentUser!.uid), p, {merge: true})} darkMode={darkMode} toggleDarkMode={() => setDarkMode(!darkMode)} language="English" onLanguageChange={() => {}} />}
+      {view === 'orders' && <OrdersPage orders={allOrders.filter(o => o.customerEmail === userProfile.email)} onBack={() => setView('home')} onCancelOrder={(id) => setDoc(doc(db, 'orders', id), { status: 'Cancelled' }, { merge: true })} onTrackOrder={(id) => { setTrackingOrderId(id); setView('order-tracking'); }} />}
+      {view === 'order-tracking' && trackingOrderId && <OrderTracking order={allOrders.find(o => o.id === trackingOrderId)!} onBack={() => setView('orders')} />}
+      {view === 'checkout' && <CheckoutPage cart={cart} onBack={() => setView('home')} onSuccess={handleOrderSuccess} />}
       
-      {view === 'seller-verification' && (
-        <SellerVerificationPage 
-          onBack={() => setView('auth')}
-          onComplete={handleVerificationComplete}
-        />
-      )}
-      
-      {view === 'profile' && <ProfilePage profile={userProfile} onBack={() => setView('home')} onUpdate={setUserProfile} darkMode={darkMode} toggleDarkMode={() => setDarkMode(!darkMode)} language={language} onLanguageChange={setLanguage} />}
-      
-      {view === 'orders' && <OrdersPage orders={orderHistory} onBack={() => setView('home')} onCancelOrder={(id) => setOrderHistory(prev => prev.map(o => o.id === id ? { ...o, status: 'Cancelled' } : o))} />}
-
       {view === 'seller-dashboard' && (
-        <SellerDashboardPage 
-          store={stores.find(s => s.id === sellerStoreId) || stores[0]} 
-          products={allProducts[sellerStoreId || ''] || []}
-          orders={orderHistory.filter(o => o.items.some(item => item.storeId === sellerStoreId))}
-          onBack={() => setView('home')}
-          onUpdateStore={handleUpdateStore}
-          onDeleteStore={handleDeleteStore}
-          onAddProduct={(p) => handleAddProduct(sellerStoreId || '', p)}
-          onUpdateProduct={(p) => handleUpdateProduct(sellerStoreId || '', p)}
-          onDeleteProduct={(id) => handleDeleteProduct(sellerStoreId || '', id)}
-          onProcessOrder={handleProcessOrder}
-        />
+        sellerStoreId ? (
+          <SellerDashboardPage 
+            store={stores.find(s => s.id === sellerStoreId) || INITIAL_STORES[0]} 
+            products={allProducts[sellerStoreId] || []} 
+            orders={allOrders.filter(o => o.items.some(item => item.storeId === sellerStoreId))}
+            onBack={() => setView('home')} 
+            onUpdateStore={(s) => setDoc(doc(db, 'stores', s.id), s, {merge: true})} 
+            onDeleteStore={handleDeleteStore}
+            onAddProduct={(p) => setDoc(doc(db, 'products', p.id), p)} 
+            onUpdateProduct={(p) => setDoc(doc(db, 'products', p.id), p)} 
+            onDeleteProduct={(id) => setDoc(doc(db, 'products', id), { isDeleted: true }, { merge: true })} 
+            onProcessOrder={(id, note) => setDoc(doc(db, 'orders', id), { status: 'Out for Delivery', sellerNote: note }, { merge: true })} 
+            onSendMessage={(msg) => userRequest && handleSendChatMessage(userRequest.id, 'seller', msg)}
+            chatHistory={userRequest?.chatHistory || []}
+          />
+        ) : (
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 overflow-y-auto shrink-0 text-center">
+             <div className={`w-20 h-20 ${userRequest?.status === 'rejected' ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-500' : 'bg-emerald-50 dark:bg-emerald-950/30 text-[#049454]'} rounded-full flex items-center justify-center mb-8 shrink-0 mx-auto`}>
+                {userRequest?.status === 'rejected' ? (
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                ) : (
+                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                )}
+             </div>
+             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-4 shrink-0">
+              {userRequest?.status === 'on_hold' ? 'Action Required' : userRequest?.status === 'rejected' ? 'Application Rejected' : 'Verification Pending'}
+             </h2>
+             <p className="text-slate-600 dark:text-slate-400 max-w-md mb-8 font-medium shrink-0 mx-auto">
+              {userRequest?.status === 'on_hold' ? 'Locality admins have requested more documents or information from you.' : userRequest?.status === 'rejected' ? 'Your store application was not approved at this time. You can re-apply with better details.' : "Locality admins are currently reviewing your documents. You'll get access to your dashboard once your store is approved."}
+             </p>
+             <button onClick={() => setView('home')} className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-10 py-4 rounded-2xl font-bold transition-all border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 mx-auto">Back to Shopping</button>
+          </div>
+        )
       )}
 
       {view === 'admin-dashboard' && (
         <AdminDashboardPage 
-          stores={stores}
-          products={allProducts}
-          heroSlides={heroSlides}
-          onboardingRequests={onboardingRequests}
-          appSettings={appSettings}
-          categories={categories}
-          onBack={() => setView('home')}
-          onUpdateHeroSlides={setHeroSlides}
-          onUpdateStore={handleUpdateStore}
-          onDeleteStore={handleDeleteStore}
-          onUpdateProduct={handleUpdateProduct}
-          onDeleteProduct={handleDeleteProduct}
-          onApproveMerchant={handleApproveMerchant}
-          onRejectMerchant={handleRejectMerchant}
-          onUpdateAppSettings={setAppSettings}
-          onUpdateCategories={setCategories}
+          stores={stores} 
+          products={allProducts} 
+          heroSlides={heroSlides} 
+          onboardingRequests={onboardingRequests} 
+          appSettings={appSettings} 
+          categories={categories} 
+          onBack={() => setView('home')} 
+          onUpdateHeroSlides={(slides) => setDoc(doc(db, 'config', 'hero_slides'), { list: slides })} 
+          onUpdateStore={(s) => setDoc(doc(db, 'stores', s.id), s, {merge: true})} 
+          onDeleteStore={handleDeleteStore} 
+          onUpdateProduct={(storeId, p) => setDoc(doc(db, 'products', p.id), p)} 
+          onDeleteProduct={(storeId, id) => setDoc(doc(db, 'products', id), { isDeleted: true, storeId }, { merge: true })} 
+          onApproveMerchant={handleApproveMerchant} 
+          onRejectMerchant={handleRejectMerchant} 
+          onHoldMerchant={handleHoldMerchant}
+          onUpdateAppSettings={(s) => setDoc(doc(db, 'config', 'app_settings'), s)} 
+          onUpdateCategories={(c) => setDoc(doc(db, 'config', 'categories'), { list: c })} 
+          onSendChatMessage={(reqId, sender, text) => handleSendChatMessage(reqId, sender, text)}
         />
       )}
 
       {view === 'home' && (
         <>
-          <div className="h-20" />
-          <div className="bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-900 transition-colors overflow-x-auto custom-scrollbar">
-            <div className="max-w-7xl mx-auto px-6 flex items-center justify-between gap-8 py-3 min-w-max">
-              {categories.map((cat) => (
-                <button
-                  key={cat.name}
-                  onClick={() => handleHeroClick(cat.name)}
-                  className={`flex flex-col items-center gap-1.5 group transition-all transform hover:scale-105 ${categoryFilter === cat.name ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
+          <header onClick={handleHeroClick} className="relative h-[200px] md:h-[250px] overflow-hidden flex items-center w-full group cursor-pointer shrink-0">
+            <div className="absolute inset-0 z-0">
+               {heroSlides.map((slide, i) => (
+                 <img 
+                    key={i}
+                    src={slide.image} 
+                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${i === heroIndex ? 'opacity-100 brightness-[0.95] dark:brightness-[0.4]' : 'opacity-0 brightness-[0.95] dark:brightness-[0.4]'}`} 
+                    style={{ opacity: i === heroIndex ? 1 : 0 }}
+                    alt={`Hero ${i}`} 
+                 />
+               ))}
+               <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/40 to-transparent dark:from-slate-950/95 dark:via-slate-950/40 dark:to-transparent"></div>
+            </div>
+            
+            <div className="max-w-7xl mx-auto w-full relative z-10 px-6 md:px-10">
+              <h2 className="text-[32px] md:text-[42px] font-extrabold text-slate-900 dark:text-white leading-[1.05] tracking-tight max-w-2xl text-left">
+                {appSettings.heroHeading} <span className="text-[#049454]">{appSettings.heroHeadingHighlight}</span>
+              </h2>
+              <div className="flex items-center gap-6 mt-6">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleShopNow(); }}
+                  className="bg-[#049454] text-white px-6 py-2.5 rounded-2xl font-bold text-sm shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-105 active:scale-95 shrink-0"
                 >
-                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl bg-slate-50 dark:bg-slate-900 border ${categoryFilter === cat.name ? 'border-[#049454] bg-[#049454]/5' : 'border-slate-100 dark:border-slate-800'}`}>
-                    {isIconUrl(cat.icon) ? <img src={cat.icon} className="w-6 h-6 object-contain" /> : cat.icon}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className={`text-[10px] font-bold whitespace-nowrap tracking-tight ${categoryFilter === cat.name ? 'text-[#049454]' : 'text-slate-600 dark:text-slate-300'}`}>
-                      {cat.name}
-                    </span>
-                    {cat.hasDropdown && (
-                      <svg className="w-2 h-2 text-slate-400 group-hover:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/></svg>
-                    )}
-                  </div>
+                  Shop Now
                 </button>
-              ))}
-            </div>
-          </div>
-
-          <header 
-            className="relative h-[200px] overflow-hidden flex items-center shadow-sm w-full cursor-pointer group"
-            onClick={() => handleHeroClick(heroSlides[heroIndex].category)}
-          >
-            <div className="absolute inset-0 z-[1] overflow-hidden">
-              <div 
-                className="flex transition-transform duration-1000 ease-in-out h-full"
-                style={{ transform: `translateX(-${heroIndex * 100}%)` }}
-              >
-                {heroSlides.map((slide, idx) => (
-                  <div key={idx} className="w-full h-full flex-shrink-0 relative">
-                    <img src={slide.image} alt={`Slide ${idx}`} className="w-full h-full object-cover brightness-[0.9] dark:brightness-[0.4]" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/50 to-transparent dark:from-slate-950/95 dark:via-slate-950/50 dark:to-transparent"></div>
-                    <div className="absolute top-3 right-6 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-xl text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-80">
-                      LIVE DEALS: {slide.category}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto w-full relative z-[10] px-8">
-              <div className="max-w-xl space-y-2 animate-in slide-in-from-left-8 duration-700">
-                <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-                  {appSettings.heroHeading} <span className="text-[#049454] drop-shadow-sm">{appSettings.heroHeadingHighlight}</span>
-                </h2>
-                <p className="hidden md:block text-sm text-slate-600 dark:text-slate-300 max-w-sm font-medium leading-relaxed">
-                  {appSettings.heroSubtext}
-                </p>
-                <div className="flex flex-wrap gap-4 pt-2">
-                  <button onClick={(e) => { e.stopPropagation(); scrollToMain(); }} className="bg-[#049454] text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all transform hover:scale-[1.02]">
-                    Shop Now
-                  </button>
+                <div className="flex gap-2">
+                   {heroSlides.map((_, i) => (
+                     <button key={i} onClick={(e) => { e.stopPropagation(); setHeroIndex(i); }} className={`h-1.5 transition-all duration-300 rounded-full ${i === heroIndex ? 'w-8 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`} />
+                   ))}
                 </div>
               </div>
             </div>
-
-            <div className="absolute bottom-4 right-8 flex gap-2 z-20">
-              {heroSlides.map((_, idx) => (
-                <button key={idx} onClick={(e) => { e.stopPropagation(); setHeroIndex(idx); }} className={`h-1 rounded-full transition-all duration-300 ${heroIndex === idx ? 'w-8 bg-[#049454]' : 'w-2 bg-slate-300 dark:bg-slate-700'}`} />
-              ))}
-            </div>
           </header>
 
-          <main className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex flex-col md:flex-row justify-between items-baseline mb-4 gap-4 border-b border-slate-50 dark:border-slate-900 pb-2">
-              <div className="space-y-1">
-                <h3 className="text-2xl font-extrabold tracking-tight">
-                  {categoryFilter ? (categoryFilter === 'Nearby Shops' ? appSettings.navSubtitle : `${categoryFilter} Gems`) : searchQuery ? `Search Results for "${searchQuery}"` : appSettings.dealsHeading}
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">{appSettings.dealsSubtext}</p>
-              </div>
-              {(categoryFilter || searchQuery) && (
-                <button onClick={() => { setCategoryFilter(null); setSearchQuery(''); }} className="text-sm font-bold text-[#049454] hover:underline flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
-                  Clear filters
-                </button>
-              )}
-            </div>
-            
-            {filteredStores.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                {filteredStores.map(store => <StoreCard key={store.id} store={store} onClick={() => { setSelectedStore(store); setView('store-detail'); }} />)}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-slate-50 dark:bg-slate-900 rounded-[40px] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                <p className="text-slate-400 font-bold">No stores found matching your criteria. Try searching for something else!</p>
+          <main id="stores-grid" className="max-w-7xl mx-auto px-6 md:px-10 py-10">
+            {categoryFilter === 'Nearby Shops' && (
+              <div className="mb-12 animate-in fade-in duration-700 text-left shrink-0">
+                <div className="flex items-center gap-3 mb-6 shrink-0">
+                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${isNearbyLoading ? 'bg-slate-200 dark:bg-slate-800 animate-pulse' : 'bg-[#049454]'}`}>
+                      {isNearbyLoading ? <div className="w-5 h-5 border-2 border-[#049454] border-t-transparent rounded-full animate-spin"></div> : <span className="text-xl">📍</span>}
+                   </div>
+                   <div>
+                      <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">Hyper-Local Discovery</h3>
+                      <p className="text-xs font-bold text-[#049454] uppercase tracking-widest">Organized Neighborhood Guide</p>
+                   </div>
+                </div>
+                {isNearbyLoading ? (
+                   <div className="p-12 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center shrink-0">
+                      <div className="w-12 h-12 border-4 border-[#049454] border-t-transparent rounded-full animate-spin mb-4 mx-auto"></div>
+                      <p className="text-slate-500 font-bold text-center">Scanning neighborhood map...</p>
+                   </div>
+                ) : nearbyDiscovery ? (
+                   <div className="space-y-10 shrink-0">
+                      <div className="p-8 bg-[#049454]/5 dark:bg-[#049454]/10 rounded-[40px] border border-[#049454]/20 shadow-sm shrink-0">
+                         <p className="text-slate-700 dark:text-slate-300 font-bold leading-relaxed">{nearbyDiscovery.text}</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 shrink-0">
+                         {nearbyDiscovery.categories.map((cat, idx) => (
+                           <div key={idx} className="bg-white dark:bg-slate-900 rounded-[32px] p-6 border border-slate-100 dark:border-slate-800 shadow-sm">
+                              <h4 className="text-sm font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b dark:border-slate-800 pb-3 uppercase tracking-wider">{cat.name}</h4>
+                              <div className="flex flex-wrap gap-2">
+                                 {cat.shops.map((shop: any, i: number) => (
+                                   <a key={i} href={shop.uri} target="_blank" rel="noreferrer" className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 hover:border-[#049454]/50 transition-all flex items-center gap-2"><span>🗺️</span> {shop.title}</a>
+                                 ))}
+                              </div>
+                           </div>
+                         ))}
+                      </div>
+                   </div>
+                ) : null}
               </div>
             )}
+            <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-1.5 text-left shrink-0">{categoryFilter === 'Nearby Shops' ? 'Locality Verified Stores' : appSettings.dealsHeading}</h3>
+            <p className="text-slate-500 font-medium mb-1.5 text-left shrink-0">{appSettings.dealsSubtext}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-8 shrink-0">
+              {filteredStores.map(store => <StoreCard key={store.id} store={store} onClick={() => { setSelectedStore(store); setView('store-detail'); }} />)}
+            </div>
           </main>
         </>
       )}
 
       {view === 'store-detail' && selectedStore && (
-        <StoreDetail 
-          store={selectedStore} 
-          products={(allProducts[selectedStore.id] || []).filter(p => !p.isPrivate)} 
-          onBack={() => setView('home')} 
-          onProductClick={(p) => { setSelectedProduct(p); setView('product-detail'); }} 
-          onAddToCart={addToCart} 
-        />
+        <StoreDetail store={selectedStore} products={(allProducts[selectedStore.id] || []).filter(p => !p.isPrivate)} onBack={() => setView('home')} onAddToCart={addToCart} onProductClick={(p) => { setSelectedProduct(p); setView('product-detail'); }} />
       )}
-
       {view === 'product-detail' && selectedProduct && <ProductDetail product={selectedProduct} similarProducts={[]} onBack={() => setView('store-detail')} onAddToCart={addToCart} onBuyNow={(p) => { addToCart(p); setView('checkout'); }} onStoreClick={() => {}} onProductClick={(p) => setSelectedProduct(p)} />}
 
-      {view === 'checkout' && <CheckoutPage cart={cart} onBack={() => setView('home')} onSuccess={handleOrderSuccess} />}
-
       {isCartOpen && (
-        <div className="fixed inset-0 z-[140]">
+        <div className="fixed inset-0 z-[140] flex justify-end">
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setIsCartOpen(false)}></div>
-          <div className="absolute right-0 top-0 bottom-0 w-full max-md:max-w-none max-w-md bg-white dark:bg-slate-900 flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
-             <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center"><h2 className="text-xl font-bold dark:text-white">Shopping Cart</h2><button onClick={() => setIsCartOpen(false)} className="text-slate-400">Close</button></div>
-             <div className="flex-1 p-8 overflow-y-auto">{cart.map(item => <div key={item.id} className="flex justify-between items-center mb-4"><div className="flex flex-col"><span className="dark:text-white font-bold">{item.name}</span><span className="text-xs text-slate-400">Qty: {item.quantity}</span></div><span className="text-[#049454] font-bold">₹{item.price * item.quantity}</span></div>)}</div>
-             {cart.length > 0 && <div className="p-8 border-t dark:border-slate-800"><div className="flex justify-between mb-4 font-bold dark:text-white"><span>Total</span><span>₹{cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}</span></div><button onClick={() => { setView('checkout'); setIsCartOpen(false); }} className="w-full bg-[#049454] text-white py-4 rounded-2xl font-bold">Proceed to Checkout</button></div>}
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 flex flex-col shadow-2xl animate-in slide-in-from-right duration-500 overflow-hidden text-left">
+             <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center shrink-0"><h2 className="text-xl font-bold dark:text-white">Shopping Cart</h2><button onClick={() => setIsCartOpen(false)} className="text-slate-400 font-bold hover:text-slate-600 shrink-0">Close</button></div>
+             <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+               {cart.length === 0 ? <p className="text-center py-20 text-slate-400 font-bold mx-auto">Your cart is empty</p> : cart.map(item => (
+                    <div key={item.id} className="flex justify-between items-center mb-6 shrink-0">
+                      <div className="flex gap-4">
+                        <img src={item.image} className="w-12 h-12 rounded-xl object-cover shrink-0" alt="" />
+                        <div className="flex flex-col text-left shrink-0">
+                          <span className="dark:text-white font-bold text-sm">{item.name}</span>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Qty: {item.quantity}</span>
+                        </div>
+                      </div>
+                      <span className="text-[#049454] font-extrabold shrink-0">₹{item.price * item.quantity}</span>
+                    </div>
+                 ))
+               }
+             </div>
+             {cart.length > 0 && (
+               <div className="p-8 border-t dark:border-slate-800 shrink-0">
+                  <div className="flex justify-between mb-4 font-bold dark:text-white text-lg shrink-0"><span>Total Estimate</span><span className="text-[#049454]">₹{cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}</span></div>
+                  <button onClick={() => { setView('checkout'); setIsCartOpen(false); }} className="w-full bg-[#049454] text-white py-5 rounded-2xl font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all shrink-0 mx-auto">Proceed to Checkout</button>
+               </div>
+             )}
           </div>
         </div>
       )}
 
-      <footer className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 py-16 text-center text-slate-400">
-        <p className="text-xs font-bold uppercase tracking-[0.2em]">{appSettings.footerText}</p>
+      <footer className="bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-800 py-16 text-center text-slate-400 shrink-0">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] shrink-0 mx-auto">{appSettings.footerText}</p>
       </footer>
     </div>
   );

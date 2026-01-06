@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppSettings } from '../types';
 
@@ -41,6 +40,11 @@ const Navbar: React.FC<NavbarProps> = ({
     if (searchTerm.trim()) onSearch(searchTerm);
   };
 
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    onSearch('');
+  };
+
   const getUserInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -81,7 +85,7 @@ const Navbar: React.FC<NavbarProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search local..." 
-            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full py-3.5 pl-12 pr-6 text-sm outline-none dark:text-white focus:border-slate-300 transition-all shadow-sm"
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-full py-3.5 pl-12 pr-12 text-sm outline-none text-slate-900 dark:text-white placeholder-slate-400 focus:border-slate-300 transition-all shadow-sm"
           />
           <div className="absolute left-4 top-1/2 -translate-y-1/2">
             {isSearching ? (
@@ -90,6 +94,15 @@ const Navbar: React.FC<NavbarProps> = ({
               <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             )}
           </div>
+          {searchTerm && (
+            <button 
+              type="button"
+              onClick={handleClearSearch}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          )}
         </form>
 
         {/* Action Section */}

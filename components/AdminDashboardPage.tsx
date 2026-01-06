@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { Store, Product, HeroSlide, MerchantOnboardingRequest, AppSettings, CategoryItem } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Store, Product, HeroSlide, MerchantOnboardingRequest, AppSettings, CategoryItem, ChatMessage } from '../types';
 
 interface AdminDashboardPageProps {
   stores: Store[];
@@ -16,9 +15,11 @@ interface AdminDashboardPageProps {
   onUpdateProduct: (storeId: string, product: Product) => void;
   onDeleteProduct: (storeId: string, productId: string) => void;
   onApproveMerchant: (requestId: string) => void;
-  onRejectMerchant: (requestId: string) => void;
+  onRejectMerchant: (requestId: string, feedback: string) => void;
+  onHoldMerchant: (requestId: string, feedback: string) => void;
   onUpdateAppSettings: (settings: AppSettings) => void;
   onUpdateCategories: (categories: CategoryItem[]) => void;
+  onSendChatMessage?: (requestId: string, sender: 'admin', text: string) => void;
 }
 
 const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
@@ -36,28 +37,25 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   onDeleteProduct,
   onApproveMerchant,
   onRejectMerchant,
+  onHoldMerchant,
   onUpdateAppSettings,
-  onUpdateCategories
+  onUpdateCategories,
+  onSendChatMessage
 }) => {
   const [activeTab, setActiveTab] = useState<'banners' | 'stores' | 'products' | 'approvals' | 'ui-editor'>('banners');
-  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
-  const [viewingRequest, setViewingRequest] = useState<MerchantOnboardingRequest | null>(null);
-  
-  // Edit states
-  const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [editingProductData, setEditingProductData] = useState<{storeId: string, product: Product} | null>(null);
+  const [editingStoreData, setEditingStoreData] = useState<Store | null>(null);
+  const [adminFeedback, setAdminFeedback] = useState<Record<string, string>>({});
+  const chatEndRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const toggleStorePrivacy = (store: Store) => {
-    onUpdateStore({ ...store, isPrivate: !store.isPrivate });
-  };
+  useEffect(() => {
+    (Object.values(chatEndRefs.current) as (HTMLDivElement | null)[]).forEach(el => el?.scrollIntoView({ behavior: 'smooth' }));
+  }, [onboardingRequests]);
 
-  const toggleStoreVerified = (store: Store) => {
-    onUpdateStore({ ...store, isVerified: !store.isVerified });
-  };
-
-  const toggleProductPrivacy = (storeId: string, product: Product) => {
-    onUpdateProduct(storeId, { ...product, isPrivate: !product.isPrivate });
-  };
+  const toggleStorePrivacy = (store: Store) => onUpdateStore({ ...store, isPrivate: !store.isPrivate });
+  const toggleStoreVerified = (store: Store) => onUpdateStore({ ...store, isVerified: !store.isVerified });
+  const toggleProductPrivacy = (storeId: string, product: Product) => onUpdateProduct(storeId, { ...product, isPrivate: !product.isPrivate });
 
   const handleUpdateSlide = (index: number, field: keyof HeroSlide, value: string) => {
     const newSlides = [...heroSlides];
@@ -65,45 +63,48 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     onUpdateHeroSlides(newSlides);
   };
 
-  const handleStoreEditSubmit = (e: React.FormEvent) => {
+  const handleSendChat = (requestId: string, e: React.FormEvent) => {
     e.preventDefault();
-    if (editingStore) {
-        onUpdateStore(editingStore);
-        setEditingStore(null);
+    const input = (e.target as any).message;
+    if (input.value.trim() && onSendChatMessage) {
+      onSendChatMessage(requestId, 'admin', input.value);
+      input.value = '';
     }
   };
 
-  const handleProductEditSubmit = (e: React.FormEvent) => {
+  const handleSaveProductEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingProductData) {
-        onUpdateProduct(editingProductData.storeId, editingProductData.product);
-        setEditingProductData(null);
+      onUpdateProduct(editingProductData.storeId, editingProductData.product);
+      setEditingProductData(null);
     }
   };
 
-  const handleAppSettingsChange = (field: keyof AppSettings, value: string) => {
-    onUpdateAppSettings({ ...appSettings, [field]: value });
+  const handleSaveStoreEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingStoreData) {
+      onUpdateStore(editingStoreData);
+      setEditingStoreData(null);
+    }
   };
 
-  const handleCategoryChange = (index: number, field: keyof CategoryItem, value: string) => {
-    const newCats = [...categories];
-    newCats[index] = { ...newCats[index], [field]: value };
-    onUpdateCategories(newCats);
+  const handleDeleteClick = (id: string) => {
+    if (window.confirm('Are you sure? This will hide the store from the platform.')) {
+      onDeleteStore(id);
+    }
   };
-
-  const isIconUrl = (icon: string) => icon.startsWith('http') || icon.startsWith('/') || icon.startsWith('data:');
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-6 md:pt-10 pb-24 px-4 md:px-6 animate-in fade-in duration-500 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-6 md:pt-10 pb-24 px-4 md:px-6 animate-in fade-in duration-500 overflow-x-hidden relative text-left">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12 gap-4">
           <button onClick={onBack} className="flex items-center gap-2 text-slate-500 font-bold text-sm hover:text-[#049454] transition-all w-fit">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/></svg>
             Back to Site
           </button>
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl md:text-3xl font-extrabold dark:text-white tracking-tight">System Admin</h1>
-            <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 text-[10px] font-bold rounded-full border border-indigo-600/20 uppercase tracking-widest">Master Access</div>
+          <div className="flex items-center gap-3 md:gap-4">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">System Admin</h1>
+            <div className="px-3 py-1 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 text-[10px] font-bold rounded-full uppercase tracking-widest whitespace-nowrap">Master Access</div>
           </div>
         </div>
 
@@ -118,131 +119,29 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 md:px-8 py-3 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 ${activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-[#049454] shadow-md scale-[1.02]' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`px-4 md:px-8 py-3 rounded-xl text-xs md:text-sm font-bold transition-all flex items-center gap-2 shrink-0 ${activeTab === tab.id ? 'bg-white dark:bg-slate-800 text-[#049454] shadow-md' : 'text-slate-500 hover:text-slate-600'}`}
             >
-              <span>{tab.icon}</span>
-              {tab.label}
-              {tab.id === 'approvals' && onboardingRequests.filter(r => r.status === 'pending').length > 0 && (
-                  <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{onboardingRequests.filter(r => r.status === 'pending').length}</span>
-              )}
+              <span>{tab.icon}</span>{tab.label}
             </button>
           ))}
         </div>
 
-        {activeTab === 'ui-editor' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 md:space-y-8">
-              <h3 className="text-xl font-bold dark:text-white">General Copy & Icon Editor</h3>
-              <div className="space-y-6">
-                {[
-                  { field: 'navTitle', label: 'Navbar Logo Text' },
-                  { field: 'navSubtitle', label: 'Navbar Subtitle (Green Text)' },
-                  { field: 'navIconUrl', label: 'Navbar Logo Icon URL (Empty = Default SVG)' },
-                  { field: 'heroHeading', label: 'Hero Heading (White/Dark Part)' },
-                  { field: 'heroHeadingHighlight', label: 'Hero Heading (Green Highlight)' },
-                  { field: 'heroSubtext', label: 'Hero Subtext (Paragraph)' },
-                  { field: 'dealsHeading', label: 'Main Section Heading' },
-                  { field: 'dealsSubtext', label: 'Main Section Subtext' },
-                  { field: 'footerText', label: 'Footer Copyright Text' }
-                ].map((item) => (
-                  <div key={item.field} className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{item.label}</label>
-                    <input 
-                      type="text" 
-                      value={appSettings[item.field as keyof AppSettings]} 
-                      onChange={(e) => handleAppSettingsChange(item.field as keyof AppSettings, e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 md:space-y-8">
-              <h3 className="text-xl font-bold dark:text-white">Categories Editor</h3>
-              <div className="space-y-6">
-                {categories.map((cat, idx) => (
-                  <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800 space-y-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-700 rounded-xl border dark:border-slate-600 shadow-sm text-lg">
-                           {isIconUrl(cat.icon) ? <img src={cat.icon} className="w-full h-full object-cover rounded-xl" /> : cat.icon}
-                        </div>
-                        <p className="font-bold dark:text-white text-sm">Category #{idx + 1}</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Name</label>
-                            <input 
-                                type="text" 
-                                value={cat.name} 
-                                onChange={(e) => handleCategoryChange(idx, 'name', e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs dark:text-white outline-none" 
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-1">Icon (Emoji or URL)</label>
-                            <input 
-                                type="text" 
-                                value={cat.icon} 
-                                onChange={(e) => handleCategoryChange(idx, 'icon', e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs dark:text-white outline-none" 
-                            />
-                        </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-[#049454]/10 text-[10px] text-[#049454] font-bold uppercase tracking-widest">
-                Changes are applied instantly to the home navigation bar.
-              </div>
-            </div>
-          </div>
-        )}
-
         {activeTab === 'banners' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 animate-in slide-in-from-bottom-4 duration-500">
             {heroSlides.map((slide, idx) => (
-              <div key={idx} className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold dark:text-white">Slide #{idx + 1}</h3>
-                  <div className={`w-3 h-3 rounded-full ${slide.color.includes('bg-emerald') ? 'bg-emerald-500' : slide.color.includes('bg-amber') ? 'bg-amber-500' : 'bg-blue-500'}`}></div>
-                </div>
-                <div className="h-40 rounded-2xl overflow-hidden border dark:border-slate-800">
-                  <img src={slide.image} className="w-full h-full object-cover" alt="Banner Preview" />
+              <div key={idx} className="bg-white dark:bg-slate-900 rounded-[28px] md:rounded-[32px] p-5 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+                <h3 className="font-bold text-slate-900 dark:text-white">Slide #{idx + 1}</h3>
+                <div className="h-32 md:h-40 rounded-2xl overflow-hidden border dark:border-slate-800">
+                  <img src={slide.image} className="w-full h-full object-cover" alt="" />
                 </div>
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Image URL</label>
-                    <input 
-                      type="text" 
-                      value={slide.image} 
-                      onChange={(e) => handleUpdateSlide(idx, 'image', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
-                    />
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Image URL</label>
+                    <input type="text" value={slide.image} onChange={(e) => handleUpdateSlide(idx, 'image', e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#049454]/30 font-bold" />
                   </div>
-                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Category Link</label>
-                      <input 
-                        type="text" 
-                        value={slide.category} 
-                        onChange={(e) => handleUpdateSlide(idx, 'category', e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Theme Color</label>
-                      <select 
-                        value={slide.color}
-                        onChange={(e) => handleUpdateSlide(idx, 'color', e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm dark:text-white outline-none"
-                      >
-                        <option value="bg-emerald-100/40 dark:bg-emerald-950/20">Emerald</option>
-                        <option value="bg-amber-100/40 dark:bg-amber-950/20">Amber</option>
-                        <option value="bg-orange-100/40 dark:bg-orange-950/20">Orange</option>
-                        <option value="bg-sky-100/40 dark:bg-sky-950/20">Sky Blue</option>
-                      </select>
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Category Label</label>
+                    <input type="text" value={slide.category} onChange={(e) => handleUpdateSlide(idx, 'category', e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#049454]/30 font-bold" />
                   </div>
                 </div>
               </div>
@@ -251,180 +150,176 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         )}
 
         {activeTab === 'stores' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            {editingStore && (
-                <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border-2 border-[#049454]/20 shadow-xl">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-lg md:text-xl font-bold dark:text-white">Edit Store: {editingStore.name}</h2>
-                        <button onClick={() => setEditingStore(null)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">Cancel</button>
-                    </div>
-                    <form onSubmit={handleStoreEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Store Name</label>
-                            <input required value={editingStore.name} onChange={e => setEditingStore({...editingStore, name: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Category</label>
-                            <input required value={editingStore.category} onChange={e => setEditingStore({...editingStore, category: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
-                            <textarea required rows={2} value={editingStore.description} onChange={e => setEditingStore({...editingStore, description: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none" />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Image URL</label>
-                            <input required value={editingStore.image} onChange={e => setEditingStore({...editingStore, image: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 md:col-span-2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-700">
-                          <div className="flex-1">
-                              <p className="font-bold dark:text-white text-sm">Verified Merchant Badge</p>
-                              <p className="text-xs text-slate-400">Enable this to show the blue checkmark next to the store name.</p>
-                          </div>
-                          <button 
-                              type="button"
-                              onClick={() => setEditingStore({...editingStore, isVerified: !editingStore.isVerified})}
-                              className={`w-14 h-8 rounded-full relative transition-all self-end sm:self-auto ${editingStore.isVerified ? 'bg-blue-500' : 'bg-slate-200 dark:bg-slate-700'}`}
-                          >
-                              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-sm ${editingStore.isVerified ? 'left-7' : 'left-1'}`}></div>
-                          </button>
-                        </div>
-                        <button type="submit" className="md:col-span-2 bg-[#049454] text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all">Save Store Changes</button>
-                    </form>
-                </div>
-            )}
-
-            <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left min-w-[700px]">
+          <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left min-w-[650px]">
                 <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Store</th>
-                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</th>
-                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                    <th className="px-6 md:px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                    </tr>
+                  <tr className="bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-800 font-bold text-[10px] uppercase tracking-widest text-slate-400">
+                    <th className="px-6 md:px-8 py-4 md:py-5">Store</th>
+                    <th className="px-6 md:px-8 py-4 md:py-5">Category</th>
+                    <th className="px-6 md:px-8 py-4 md:py-5">Status</th>
+                    <th className="px-6 md:px-8 py-4 md:py-5 text-right">Actions</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y dark:divide-slate-800">
-                    {stores.map(store => (
-                    <tr key={store.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors text-sm">
-                        <td className="px-6 md:px-8 py-5">
-                        <div className="flex items-center gap-4">
-                            <img src={store.image} className="w-10 h-10 rounded-lg object-cover" alt="" />
-                            <div>
-                                <div className="flex items-center gap-1.5">
-                                    <p className="font-bold dark:text-white truncate max-w-[120px] md:max-w-none">{store.name}</p>
-                                    {store.isVerified && (
-                                        <svg className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
-                                    )}
-                                </div>
-                                <p className="text-[10px] text-slate-400">ID: {store.id}</p>
-                            </div>
+                  {stores.map(store => (
+                    <tr key={store.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 text-xs md:text-sm">
+                      <td className="px-6 md:px-8 py-4 md:py-5">
+                        <div className="flex items-center gap-3 md:gap-4">
+                          <img src={store.image} className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-cover shrink-0" alt="" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 dark:text-white truncate">{store.name}</p>
+                            <p className="text-[9px] md:text-[10px] text-slate-400">ID: {store.id}</p>
+                          </div>
                         </div>
-                        </td>
-                        <td className="px-6 md:px-8 py-5 text-slate-600 dark:text-slate-300">{store.category}</td>
-                        <td className="px-6 md:px-8 py-5">
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={() => toggleStorePrivacy(store)}
-                                    className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${store.isPrivate ? 'bg-rose-50 text-rose-500 border border-rose-200' : 'bg-emerald-50 text-[#049454] border border-[#049454]/20'}`}
-                                >
-                                    {store.isPrivate ? 'Private' : 'Public'}
-                                </button>
-                                <button 
-                                    onClick={() => toggleStoreVerified(store)}
-                                    className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all ${store.isVerified ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}
-                                >
-                                    {store.isVerified ? 'Verified' : 'Unverified'}
-                                </button>
-                            </div>
-                        </td>
-                        <td className="px-6 md:px-8 py-5 text-right">
-                        <div className="flex justify-end gap-3">
-                            <button onClick={() => setEditingStore(store)} className="p-2 text-slate-300 hover:text-[#049454] transition-colors" title="Edit Store Content">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                            </button>
-                            <button onClick={() => onDeleteStore(store.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors" title="Delete Store">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
+                      </td>
+                      <td className="px-6 md:px-8 py-4 md:py-5 text-slate-700 dark:text-slate-300 whitespace-nowrap">{store.category}</td>
+                      <td className="px-6 md:px-8 py-4 md:py-5">
+                        <div className="flex gap-1.5 md:gap-2">
+                          <button onClick={() => toggleStorePrivacy(store)} className={`px-2 md:px-2.5 py-1 rounded-full text-[8px] md:text-[9px] font-bold uppercase border transition-all ${store.isPrivate ? 'bg-rose-50 text-rose-500 border-rose-200' : 'bg-emerald-50 text-[#049454] border-[#049454]/20'}`}>
+                            {store.isPrivate ? 'Private' : 'Public'}
+                          </button>
+                          <button onClick={() => toggleStoreVerified(store)} className={`px-2 md:px-2.5 py-1 rounded-full text-[8px] md:text-[9px] font-bold uppercase border transition-all ${store.isVerified ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                            {store.isVerified ? 'Verified' : 'Unverified'}
+                          </button>
                         </div>
-                        </td>
+                      </td>
+                      <td className="px-6 md:px-8 py-4 md:py-5">
+                        <div className="flex justify-end items-center gap-3">
+                          <button onClick={() => setEditingStoreData(store)} className="text-slate-300 hover:text-blue-500 transition-colors">
+                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                          </button>
+                          <button onClick={() => handleDeleteClick(store.id)} className="text-slate-300 hover:text-rose-500 transition-colors">
+                            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                    ))}
+                  ))}
                 </tbody>
-                </table>
+              </table>
             </div>
           </div>
         )}
 
-        {activeTab === 'products' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            {editingProductData && (
-                <div className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border-2 border-[#049454]/20 shadow-xl">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-lg md:text-xl font-bold dark:text-white">Edit Product: {editingProductData.product.name}</h2>
-                        <button onClick={() => setEditingProductData(null)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">Cancel</button>
+        {activeTab === 'approvals' && (
+          <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
+            {onboardingRequests.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 text-center border border-dashed border-slate-200 dark:border-slate-800 shadow-sm">
+                <p className="text-slate-400 font-bold text-lg">No pending applications</p>
+                <p className="text-slate-300 text-sm mt-1 font-medium">All clear for now!</p>
+              </div>
+            ) : (
+              onboardingRequests.map(req => (
+                <div key={req.id} className="bg-white dark:bg-slate-900 rounded-[48px] overflow-hidden border border-slate-100 dark:border-slate-800 shadow-xl flex flex-col lg:flex-row">
+                  <div className="lg:w-96 bg-slate-50 dark:bg-slate-900/50 p-8 md:p-10 border-r border-slate-100 dark:border-slate-800">
+                    <div className="relative group mb-8">
+                      <div className="aspect-square w-full rounded-[40px] overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl">
+                        <img src={req.photoUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Business Logo" />
+                      </div>
                     </div>
-                    <form onSubmit={handleProductEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Name</label>
-                            <input required value={editingProductData.product.name} onChange={e => setEditingProductData({...editingProductData, product: {...editingProductData.product, name: e.target.value}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Price (₹)</label>
-                            <input required type="number" value={editingProductData.product.price} onChange={e => setEditingProductData({...editingProductData, product: {...editingProductData.product, price: parseFloat(e.target.value)}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
-                            <textarea required rows={2} value={editingProductData.product.description} onChange={e => setEditingProductData({...editingProductData, product: {...editingProductData.product, description: e.target.value}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none" />
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Image URL</label>
-                            <input required value={editingProductData.product.image} onChange={e => setEditingProductData({...editingProductData, product: {...editingProductData.product, image: e.target.value}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20" />
-                        </div>
-                        <button type="submit" className="md:col-span-2 bg-[#049454] text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-900/10 hover:bg-[#037c46] transition-all">Save Product Changes</button>
-                    </form>
-                </div>
-            )}
+                    <div className="space-y-8">
+                      <div>
+                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] mb-3 px-1">Merchant Category</p>
+                        <span className="inline-block px-4 py-2 bg-[#049454]/10 text-[#049454] rounded-2xl text-xs font-bold border border-[#049454]/20 uppercase">{req.category}</span>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em] px-1">Supporting Documents</p>
+                        {req.idProofUrl && (
+                          <a href={req.idProofUrl} target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 rounded-xl flex items-center justify-center">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                               </div>
+                               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Identity Proof</span>
+                             </div>
+                             <svg className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                          </a>
+                        )}
+                        {req.licenseUrl && (
+                          <a href={req.licenseUrl} target="_blank" rel="noreferrer" className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 bg-amber-50 dark:bg-amber-950/30 text-amber-600 rounded-xl flex items-center justify-center">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                               </div>
+                               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Business License</span>
+                             </div>
+                             <svg className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-            {Object.entries(products).map(([storeId, storeProducts]) => {
+                  <div className="flex-1 p-8 md:p-12 flex flex-col text-left">
+                    <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-12">
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-[0.2em]">Application ID: {req.id}</p>
+                        <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tighter leading-tight">{req.businessName}</h2>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">{req.address}</p>
+                      </div>
+                      <div className={`px-6 py-3 rounded-2xl text-[10px] font-extrabold uppercase tracking-widest border-2 shadow-sm whitespace-nowrap ${
+                        req.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                        req.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                        req.status === 'on_hold' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                        'bg-rose-50 text-rose-600 border-rose-100'
+                      }`}>{req.status.replace('_', ' ')}</div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950/40 rounded-[40px] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-inner mb-12">
+                      <div className="flex-1 min-h-[300px] max-h-[400px] overflow-y-auto p-8 space-y-6 custom-scrollbar bg-white/30 dark:bg-slate-900/10">
+                         {req.chatHistory?.map((msg, i) => (
+                           <div key={i} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[85%] space-y-1`}>
+                                <div className={`px-6 py-3.5 rounded-[24px] text-sm font-bold shadow-sm ${msg.sender === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-tl-none border border-slate-100 dark:border-slate-700'}`}>{msg.text}</div>
+                                <p className={`text-[9px] font-bold text-slate-400 px-2 ${msg.sender === 'admin' ? 'text-right' : 'text-left'}`}>{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                              </div>
+                           </div>
+                         ))}
+                         <div ref={(el) => { chatEndRefs.current[req.id] = el; }} />
+                      </div>
+                      <form onSubmit={(e) => handleSendChat(req.id, e)} className="p-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-4">
+                         <input name="message" placeholder="Communicate with merchant..." className="flex-1 bg-slate-50 dark:bg-slate-800 px-6 py-4 rounded-2xl text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                         <button type="submit" className="bg-indigo-600 text-white w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>
+                      </form>
+                    </div>
+
+                    <div className="pt-10 border-t border-slate-100 dark:border-slate-800 space-y-8">
+                      <textarea value={adminFeedback[req.id] || req.adminFeedback || ''} onChange={(e) => setAdminFeedback({ ...adminFeedback, [req.id]: e.target.value })} placeholder="Application decision feedback..." className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[32px] text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-[#049454]/20 resize-none font-bold min-h-[120px]" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onClick={() => onApproveMerchant(req.id)} className="bg-[#049454] text-white py-5 rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-xl">Approve & Launch</button>
+                        <button onClick={() => onHoldMerchant(req.id, adminFeedback[req.id] || '')} className="bg-blue-50 text-blue-600 py-5 rounded-2xl font-extrabold text-xs uppercase tracking-widest border-2 border-blue-100">Request Info</button>
+                        <button onClick={() => onRejectMerchant(req.id, adminFeedback[req.id] || '')} className="bg-rose-50 text-rose-500 py-5 rounded-2xl font-extrabold text-xs uppercase tracking-widest border-2 border-rose-100">Reject</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'products' && (
+          <div className="space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+            {Object.entries(products).map(([storeId, storeProducts]: [string, Product[]]) => {
               const store = stores.find(s => s.id === storeId);
               if (!store) return null;
               return (
-                <div key={storeId} className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
-                  <div className="flex items-center gap-3 mb-6 border-b dark:border-slate-800 pb-4">
-                    <img src={store.image} className="w-8 h-8 rounded-full object-cover" alt="" />
-                    <h3 className="font-extrabold dark:text-white text-lg truncate">{store.name}'s Catalog</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(storeProducts as Product[]).map(product => (
-                      <div key={product.id} className="group relative flex flex-col gap-4 p-5 rounded-[28px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 transition-all hover:border-[#049454]/30 shadow-sm">
-                        <div className="flex gap-4">
-                            <img src={product.image} className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover shrink-0 shadow-sm" alt="" />
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between mb-1">
-                                    <h4 className="font-bold dark:text-white text-sm truncate pr-2">{product.name}</h4>
-                                    <button 
-                                        onClick={() => toggleProductPrivacy(storeId, product)}
-                                        className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-widest border transition-all ${product.isPrivate ? 'bg-rose-50 text-rose-500 border-rose-200' : 'bg-emerald-50 text-[#049454] border-[#049454]/20'}`}
-                                    >
-                                        {product.isPrivate ? 'Private' : 'Public'}
-                                    </button>
-                                </div>
-                                <p className="text-[#049454] font-extrabold text-sm mb-3">₹{product.price}</p>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <button onClick={() => setViewingProduct(viewingProduct?.id === product.id ? null : product)} className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 hover:text-[#049454] transition-colors">{viewingProduct?.id === product.id ? 'Hide' : 'Details'}</button>
-                                    <span className="text-slate-200 dark:text-slate-800 hidden xs:block">•</span>
-                                    <button onClick={() => setEditingProductData({storeId, product})} className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 hover:text-blue-700 transition-colors">Edit</button>
-                                    <span className="text-slate-200 dark:text-slate-800 hidden xs:block">•</span>
-                                    <button onClick={() => onDeleteProduct(storeId, product.id)} className="flex items-center gap-1.5 text-[10px] font-bold text-rose-400 hover:text-rose-600 transition-colors">Delete</button>
-                                </div>
-                            </div>
+                <div key={storeId} className="bg-white dark:bg-slate-900 rounded-[28px] md:rounded-[40px] p-5 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm text-left">
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-lg md:text-2xl mb-6 md:mb-8 border-b dark:border-slate-800 pb-4 md:pb-6">{store.name}'s Catalog</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+                    {storeProducts.map(product => (
+                      <div key={product.id} className="p-4 md:p-6 rounded-[24px] md:rounded-[32px] bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 shadow-sm flex gap-4 md:gap-6 group">
+                        <img src={product.image} className="w-16 h-16 md:w-24 md:h-24 rounded-xl md:rounded-2xl object-cover shrink-0" alt={product.name} />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-slate-900 dark:text-white text-sm md:text-lg truncate pr-2">{product.name}</h4>
+                          <p className="text-[#049454] font-extrabold text-base md:text-xl mb-3 md:mb-4">₹{product.price}</p>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setEditingProductData({ storeId, product })} className="text-[10px] md:text-xs font-bold text-blue-500 hover:underline">Edit</button>
+                            <button onClick={() => onDeleteProduct(storeId, product.id)} className="text-[10px] md:text-xs font-bold text-rose-500 hover:underline">Delete</button>
+                          </div>
                         </div>
-                        {viewingProduct?.id === product.id && (
-                            <div className="mt-2 pt-3 border-t dark:border-slate-800 animate-in fade-in slide-in-from-top-1 duration-200">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Description</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed italic">"{product.description}"</p>
-                            </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -434,76 +329,127 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
         )}
 
-        {activeTab === 'approvals' && (
-            <div className="space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                    <h2 className="text-xl md:text-2xl font-bold dark:text-white">Merchant Approvals</h2>
-                    <p className="text-sm text-slate-400">{onboardingRequests.length} Total Applications</p>
-                </div>
-                {onboardingRequests.length === 0 ? (
-                    <div className="text-center py-24 md:py-32 bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[40px] border-2 border-dashed border-slate-100 dark:border-slate-800">
-                        <p className="text-slate-400 font-bold">No merchant applications at the moment.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 gap-6">
-                        {onboardingRequests.map(req => (
-                            <div key={req.id} className="bg-white dark:bg-slate-900 rounded-[24px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
-                                <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-                                    <div className="shrink-0 flex flex-col items-center md:items-start">
-                                        <img src={req.photoUrl} className="w-24 h-24 md:w-32 md:h-32 rounded-[16px] md:rounded-[24px] object-cover shadow-md" alt="" />
-                                        <div className={`mt-4 w-full text-center py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${req.status === 'pending' ? 'bg-amber-50 text-amber-500' : req.status === 'approved' ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'}`}>
-                                            {req.status}
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 space-y-4">
-                                        <div className="flex flex-col xs:flex-row justify-between items-start gap-2">
-                                            <div>
-                                                <h3 className="text-lg md:text-xl font-bold dark:text-white">{req.businessName}</h3>
-                                                <p className="text-sm text-[#049454] font-bold">{req.category}</p>
-                                            </div>
-                                            <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase">Submitted: {req.submittedAt}</p>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-500">
-                                            <p><span className="font-bold text-xs">Email:</span> {req.email}</p>
-                                            <p><span className="font-bold text-xs">Phone:</span> {req.phone}</p>
-                                            <p className="sm:col-span-2"><span className="font-bold text-xs">Address:</span> {req.address}</p>
-                                        </div>
-                                        <div className="pt-4 border-t dark:border-slate-800">
-                                            <button onClick={() => setViewingRequest(viewingRequest?.id === req.id ? null : req)} className="text-[#049454] text-xs font-bold hover:underline mb-4 block">
-                                                {viewingRequest?.id === req.id ? 'Hide Documents' : 'Review Documents & License'}
-                                            </button>
-                                            {viewingRequest?.id === req.id && (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID Proof Preview</p>
-                                                        <div className="aspect-video bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden border dark:border-slate-700 flex items-center justify-center">
-                                                            <img src={req.idProofUrl} className="w-full h-full object-cover opacity-50" alt="ID Proof" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Business License Preview</p>
-                                                        <div className="aspect-video bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden border dark:border-slate-700 flex items-center justify-center">
-                                                            <img src={req.licenseUrl} className="w-full h-full object-cover opacity-50" alt="License" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {req.status === 'pending' && (
-                                                <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                                                    <button onClick={() => onApproveMerchant(req.id)} className="flex-1 bg-emerald-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/10 transition-transform active:scale-95">Approve & Verify</button>
-                                                    <button onClick={() => onRejectMerchant(req.id)} className="flex-1 bg-rose-50 text-rose-500 border border-rose-200 py-3 rounded-xl font-bold text-sm transition-transform active:scale-95">Reject Application</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+        {activeTab === 'ui-editor' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 animate-in slide-in-from-bottom-4 duration-500 text-left">
+            <div className="bg-white dark:bg-slate-900 rounded-[28px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 md:space-y-8">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Copy Editor</h3>
+              <div className="space-y-5 md:space-y-6">
+                {Object.keys(appSettings).map((field) => (
+                  <div key={field} className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">{field}</label>
+                    <input type="text" value={appSettings[field as keyof AppSettings]} onChange={(e) => onUpdateAppSettings({ ...appSettings, [field]: e.target.value })} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl text-xs md:text-sm text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#049454]/30 font-bold" />
+                  </div>
+                ))}
+              </div>
             </div>
+            <div className="bg-white dark:bg-slate-900 rounded-[28px] md:rounded-[32px] p-6 md:p-8 border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 md:space-y-8">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Categories Editor</h3>
+              <div className="space-y-5 md:space-y-6">
+                {categories.map((cat, idx) => (
+                  <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" value={cat.name} onChange={(e) => { const c = [...categories]; c[idx].name = e.target.value; onUpdateCategories(c); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-bold" />
+                    <input type="text" value={cat.icon} onChange={(e) => { const c = [...categories]; c[idx].icon = e.target.value; onUpdateCategories(c); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-bold" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
+
+      {/* Edit Product Modal */}
+      {editingProductData && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingProductData(null)}></div>
+          <div className="relative bg-white dark:bg-slate-900 rounded-[32px] w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-300 text-left max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-8 border-b dark:border-slate-800 shrink-0">
+               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Product</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+              <form onSubmit={handleSaveProductEdit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Name</label>
+                  <input type="text" value={editingProductData.product.name} onChange={(e) => setEditingProductData({...editingProductData, product: {...editingProductData.product, name: e.target.value}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white font-bold outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Price</label>
+                  <input type="number" value={editingProductData.product.price} onChange={(e) => setEditingProductData({...editingProductData, product: {...editingProductData.product, price: parseFloat(e.target.value)}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white font-bold outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Image URL</label>
+                  <input type="text" value={editingProductData.product.image} onChange={(e) => setEditingProductData({...editingProductData, product: {...editingProductData.product, image: e.target.value}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white font-bold outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Description</label>
+                  <textarea value={editingProductData.product.description} onChange={(e) => setEditingProductData({...editingProductData, product: {...editingProductData.product, description: e.target.value}})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl dark:text-white resize-none font-bold outline-none" rows={3} />
+                </div>
+              </form>
+            </div>
+            <div className="p-8 border-t dark:border-slate-800 flex gap-4 shrink-0">
+                <button type="button" onClick={() => setEditingProductData(null)} className="flex-1 px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 rounded-2xl font-bold">Cancel</button>
+                <button type="button" onClick={handleSaveProductEdit} className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-2xl font-bold">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Store Modal with RECOVERY CREDENTIALS */}
+      {editingStoreData && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setEditingStoreData(null)}></div>
+          <div className="relative bg-white dark:bg-slate-900 rounded-[32px] w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-300 text-left max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center shrink-0">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Store Profile</h2>
+                <button onClick={() => setEditingStoreData(null)} className="text-slate-400 hover:text-slate-600"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+              <form onSubmit={handleSaveStoreEdit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Store Name</label>
+                      <input type="text" value={editingStoreData.name} onChange={(e) => setEditingStoreData({...editingStoreData, name: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Category</label>
+                      <input type="text" value={editingStoreData.category} onChange={(e) => setEditingStoreData({...editingStoreData, category: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold" />
+                    </div>
+                </div>
+
+                <div className="p-6 bg-amber-50 dark:bg-amber-950/20 rounded-[28px] border-2 border-amber-100 dark:border-amber-900/50 space-y-5 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-8 h-8 bg-amber-500 text-white rounded-lg flex items-center justify-center shadow-sm"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div>
+                      <p className="text-[10px] font-extrabold text-amber-600 uppercase tracking-[0.15em]">Merchant Access Recovery</p>
+                    </div>
+                    <p className="text-[10px] text-amber-500/80 font-medium px-1 leading-relaxed">Changes here allow the seller to log in if they forget their old account. This email becomes their primary key.</p>
+                    <div className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Recovery Email</label>
+                        <input type="email" value={editingStoreData.email || ''} onChange={(e) => setEditingStoreData({...editingStoreData, email: e.target.value})} placeholder="merchant@example.com" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/80 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30 font-bold" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Recovery Password</label>
+                        <input type="text" value={editingStoreData.password || ''} onChange={(e) => setEditingStoreData({...editingStoreData, password: e.target.value})} placeholder="Set new fallback password" title="Merchant can use this password to sign in if they lose access" className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/80 rounded-xl text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500/30 font-bold" />
+                      </div>
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Image URL</label>
+                  <input type="text" value={editingStoreData.image} onChange={(e) => setEditingStoreData({...editingStoreData, image: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Description</label>
+                  <textarea value={editingStoreData.description} onChange={(e) => setEditingStoreData({...editingStoreData, description: e.target.value})} className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none font-bold" rows={3} />
+                </div>
+              </form>
+            </div>
+            <div className="p-8 border-t dark:border-slate-800 flex gap-4 shrink-0">
+                <button type="button" onClick={() => setEditingStoreData(null)} className="flex-1 px-6 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-bold">Cancel</button>
+                <button type="button" onClick={handleSaveStoreEdit} className="flex-1 px-6 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-900/20">Update Store</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
