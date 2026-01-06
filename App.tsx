@@ -107,7 +107,6 @@ const App: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  // DEFAULT THEME: Set initial state to true for Dark Mode
   const [darkMode, setDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -126,15 +125,16 @@ const App: React.FC = () => {
         setRecoveryUser(null);
         const isLocaAdmin = user.email?.toLowerCase() === 'loca@gmail.com';
         
-        // ADMIN RECOVERY DISPLAY: Set default System Admin profile immediately if email matches
+        // Immediate Admin Recovery: Set identity before Firestore document loads
         if (isLocaAdmin) {
           setIsAdmin(true);
-          setUserProfile(prev => ({
-            ...prev,
+          setUserProfile({
             name: 'System Admin',
-            email: user.email || '',
-            isAdmin: true
-          }));
+            email: user.email || 'loca@gmail.com',
+            phone: '',
+            address: 'Central Headquarters',
+            joinDate: 'Genesis'
+          });
         }
 
         onSnapshot(doc(db, 'users', user.uid), (snap) => {
@@ -151,13 +151,8 @@ const App: React.FC = () => {
             setIsAdmin(data.isAdmin || isLocaAdmin);
             setSellerStoreId(data.storeId || null);
           } else if (isLocaAdmin) {
-            // Ensure Admin name stays "System Admin" even if no firestore profile doc exists
-            setUserProfile(prev => ({
-                ...prev,
-                name: 'System Admin',
-                email: user.email || '',
-                isAdmin: true
-            }));
+            // Keep Admin identity stable even if doc doesn't exist
+            setUserProfile(prev => ({ ...prev, name: 'System Admin', isAdmin: true }));
           }
         });
       } else {
