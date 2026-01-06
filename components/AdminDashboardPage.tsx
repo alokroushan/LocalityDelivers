@@ -347,8 +347,14 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               <div className="space-y-5 md:space-y-6">
                 {categories.map((cat, idx) => (
                   <div key={idx} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" value={cat.name} onChange={(e) => { const c = [...categories]; c[idx].name = e.target.value; onUpdateCategories(c); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-bold" />
-                    <input type="text" value={cat.icon} onChange={(e) => { const c = [...categories]; c[idx].icon = e.target.value; onUpdateCategories(c); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-bold" />
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Name</label>
+                      <input type="text" value={cat.name} onChange={(e) => { const c = [...categories]; c[idx].name = e.target.value; onUpdateCategories(c); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#049454]/30" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Icon</label>
+                      <input type="text" value={cat.icon} onChange={(e) => { const c = [...categories]; c[idx].icon = e.target.value; onUpdateCategories(c); }} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-[#049454]/30" />
+                    </div>
                   </div>
                 ))}
               </div>

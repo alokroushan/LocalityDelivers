@@ -275,6 +275,14 @@ const App: React.FC = () => {
     });
   };
 
+  const removeFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const clearCart = () => {
+    setCart([]);
+  };
+
   const handleHeroClick = () => {
     const currentSlide = heroSlides[heroIndex];
     if (currentSlide && currentSlide.category) {
@@ -628,16 +636,27 @@ const App: React.FC = () => {
       {isCartOpen && (
         <div className="fixed inset-0 z-[140] flex justify-end">
           <div className="absolute inset-0 bg-slate-900/40" onClick={() => setIsCartOpen(false)}></div>
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 flex flex-col shadow-2xl animate-in slide-in-from-right duration-500 overflow-hidden text-left">
-             <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center shrink-0"><h2 className="text-xl font-bold dark:text-white">Shopping Cart</h2><button onClick={() => setIsCartOpen(false)} className="text-slate-400 font-bold hover:text-slate-600 shrink-0">Close</button></div>
+          <div className="relative w-full max-w-md bg-white dark:bg-[#0b1426] flex flex-col shadow-2xl animate-in slide-in-from-right duration-500 overflow-hidden text-left">
+             <div className="p-8 border-b dark:border-slate-800 flex justify-between items-center shrink-0">
+               <h2 className="text-xl font-bold dark:text-white">Shopping Cart</h2>
+               <div className="flex gap-4 items-center">
+                 {cart.length > 0 && (
+                   <button onClick={clearCart} className="text-rose-500 text-xs font-bold hover:underline">Clear All</button>
+                 )}
+                 <button onClick={() => setIsCartOpen(false)} className="text-slate-400 font-bold hover:text-slate-600 shrink-0">Close</button>
+               </div>
+             </div>
              <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                {cart.length === 0 ? <p className="text-center py-20 text-slate-400 font-bold mx-auto">Your cart is empty</p> : cart.map(item => (
-                    <div key={item.id} className="flex justify-between items-center mb-6 shrink-0">
+                    <div key={item.id} className="flex justify-between items-center mb-6 shrink-0 group">
                       <div className="flex gap-4">
                         <img src={item.image} className="w-12 h-12 rounded-xl object-cover shrink-0" alt="" />
                         <div className="flex flex-col text-left shrink-0">
                           <span className="dark:text-white font-bold text-sm">{item.name}</span>
-                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Qty: {item.quantity}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Qty: {item.quantity}</span>
+                            <button onClick={(e) => { e.stopPropagation(); removeFromCart(item.id); }} className="text-[9px] text-rose-500 font-bold uppercase tracking-widest hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Remove</button>
+                          </div>
                         </div>
                       </div>
                       <span className="text-[#049454] font-extrabold shrink-0">₹{item.price * item.quantity}</span>
