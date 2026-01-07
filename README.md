@@ -124,6 +124,12 @@ into a single, scalable platform optimized for neighborhoods.
 
 ## 🧑‍💻 Team
 
+This project was collaboratively built by:
+
+1. **Komal Dadwal**
+2. **Nivedita Sikarwar**
+3. **Alok Roushan**
+
 Built with ❤️ to support local businesses and neighborhood economies.
 
 ---
