@@ -77,9 +77,8 @@ into a single, scalable platform optimized for neighborhoods.
 - Google Maps API – Nearby store discovery, location grounding, delivery estimation  
 - Firebase Authentication – Secure role-based authentication  
 - Cloud Firestore – Real-time database for users, stores, products, and orders  
-- Firebase Cloud Functions – Backend business logic  
-- Firebase Hosting – Scalable web hosting  
-
+- Firebase Cloud Functions – Backend business logic
+  
 ---
 
 ## 🔄 Process Flow
