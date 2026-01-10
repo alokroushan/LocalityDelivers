@@ -1,13 +1,21 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const getLocalRecommendations = async (lat?: number, lng?: number, query: string = "Nearby shops and local businesses") => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
   
-  // Step 1: Discover using Maps + Search Grounding (Gemini 2.5 Flash)
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    console.error("Gemini API Key is missing.");
+    return {
+      text: "Discovery features are currently unavailable. Please check the API configuration.",
+      categories: []
+    };
+  }
+
+  // Use the mandatory initialization pattern
+  const ai = new GoogleGenAI({ apiKey });
+  
   const discoveryModel = 'gemini-2.5-flash'; 
   const discoveryConfig: any = {
-    // Maps grounding is only supported in Gemini 2.5 series
-    // googleMaps may be used with googleSearch
     tools: [{ googleMaps: {} }, { googleSearch: {} }],
   };
 
@@ -35,7 +43,6 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const text = response.text || "Scanning your immediate neighborhood for the best gems...";
     
-    // Comprehensive extraction from all possible grounding types
     const links: { title: string, uri: string }[] = [];
     groundingChunks.forEach((chunk: any) => {
         if (chunk.maps?.uri) {
@@ -51,10 +58,8 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
         }
     });
 
-    // Deduplicate links by URI
     const uniqueLinks = Array.from(new Map(links.map(item => [item.uri, item])).values());
 
-    // Step 2: Categorize using the ultra-fast Gemini 3 Flash model
     if (uniqueLinks.length > 0) {
       const categorizationModel = 'gemini-3-flash-preview';
       const catResponse = await ai.models.generateContent({
@@ -105,8 +110,11 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 };
 
 export const getSmartSuggestions = async (cartItems: string[]) => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === "undefined" || apiKey === "") return [];
+
   const model = 'gemini-3-flash-preview';
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
