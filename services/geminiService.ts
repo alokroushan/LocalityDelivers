@@ -2,18 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const getLocalRecommendations = async (lat?: number, lng?: number, query: string = "Nearby shops and local businesses") => {
-  // Try to get API key from process.env or a potential global injection
-  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
-  
-  if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    console.error("Gemini API Key is missing. Ensure process.env.API_KEY is configured.");
-    return {
-      text: "Discovery features are currently unavailable. Please check the API configuration.",
-      categories: []
-    };
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Directly initialize using process.env.API_KEY as per guidelines
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const discoveryModel = 'gemini-2.5-flash'; 
   const discoveryConfig: any = {
@@ -101,8 +91,15 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
     }
 
     return { text, categories: [] };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Discovery Error:", error);
+    // If the error is due to missing key or 403, provide a specific helpful message
+    if (error?.message?.includes('leaked') || error?.message?.includes('403')) {
+       return {
+         text: "Discovery features are currently being updated. Please check back in a few minutes.",
+         categories: []
+       };
+    }
     return {
       text: "We're currently highlighting our verified community partners. Check out the curated list below!",
       categories: []
@@ -111,15 +108,11 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 };
 
 export const getSmartSuggestions = async (cartItems: string[]) => {
-  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
-  if (!apiKey || apiKey === "undefined" || apiKey === "") return [];
-
-  const model = 'gemini-3-flash-preview';
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: 'gemini-3-flash-preview',
       contents: `Analyze these local cart items: ${cartItems.join(', ')}. Suggest 3 complementary local items. Return a JSON list with 'title' and 'reason'.`,
       config: {
         responseMimeType: "application/json",
