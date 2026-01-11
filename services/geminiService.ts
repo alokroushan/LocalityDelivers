@@ -1,8 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const getLocalRecommendations = async (lat?: number, lng?: number, query: string = "Nearby shops and local businesses") => {
-  // Always initialize right before use with process.env.API_KEY as per guidelines
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey || apiKey === "undefined" || apiKey === "") {
+    console.error("Gemini API Key is missing.");
+    return {
+      text: "Discovery features are currently unavailable. Please check the API configuration.",
+      categories: []
+    };
+  }
+
+  // Use the mandatory initialization pattern
+  const ai = new GoogleGenAI({ apiKey });
   
   const discoveryModel = 'gemini-2.5-flash'; 
   const discoveryConfig: any = {
@@ -90,17 +100,8 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
     }
 
     return { text, categories: [] };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Discovery Error:", error);
-    
-    // Provide a helpful fallback message for API configuration issues
-    if (error?.message?.toLowerCase().includes('key') || error?.message?.includes('403')) {
-      return {
-        text: "Discovery features are currently being tuned. Please check back in a moment or explore our verified stores below!",
-        categories: []
-      };
-    }
-
     return {
       text: "We're currently highlighting our verified community partners. Check out the curated list below!",
       categories: []
@@ -109,11 +110,15 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 };
 
 export const getSmartSuggestions = async (cartItems: string[]) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === "undefined" || apiKey === "") return [];
+
+  const model = 'gemini-3-flash-preview';
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model,
       contents: `Analyze these local cart items: ${cartItems.join(', ')}. Suggest 3 complementary local items. Return a JSON list with 'title' and 'reason'.`,
       config: {
         responseMimeType: "application/json",
