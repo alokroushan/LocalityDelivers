@@ -1,17 +1,18 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const getLocalRecommendations = async (lat?: number, lng?: number, query: string = "Nearby shops and local businesses") => {
-  const apiKey = process.env.API_KEY;
+  // Try to get API key from process.env or a potential global injection
+  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
   
   if (!apiKey || apiKey === "undefined" || apiKey === "") {
-    console.error("Gemini API Key is missing.");
+    console.error("Gemini API Key is missing. Ensure process.env.API_KEY is configured.");
     return {
       text: "Discovery features are currently unavailable. Please check the API configuration.",
       categories: []
     };
   }
 
-  // Use the mandatory initialization pattern
   const ai = new GoogleGenAI({ apiKey });
   
   const discoveryModel = 'gemini-2.5-flash'; 
@@ -110,7 +111,7 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
 };
 
 export const getSmartSuggestions = async (cartItems: string[]) => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) || "";
   if (!apiKey || apiKey === "undefined" || apiKey === "") return [];
 
   const model = 'gemini-3-flash-preview';
