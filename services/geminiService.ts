@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 export const getLocalRecommendations = async (lat?: number, lng?: number, query: string = "Nearby shops and local businesses") => {
-  // Use the API key provided by the environment (e.g. Vercel Secrets)
+  // Always initialize right before use with process.env.API_KEY as per guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const discoveryModel = 'gemini-2.5-flash'; 
@@ -93,10 +93,10 @@ export const getLocalRecommendations = async (lat?: number, lng?: number, query:
   } catch (error: any) {
     console.error("Discovery Error:", error);
     
-    // Check if the key is leaked or permission denied
-    if (error?.message?.toLowerCase().includes('leaked') || error?.message?.includes('403')) {
+    // Provide a helpful fallback message for API configuration issues
+    if (error?.message?.toLowerCase().includes('key') || error?.message?.includes('403')) {
       return {
-        text: "Discovery features are currently being updated. Please call our support at 8798765657 if you need immediate shopping help!",
+        text: "Discovery features are currently being tuned. Please check back in a moment or explore our verified stores below!",
         categories: []
       };
     }
